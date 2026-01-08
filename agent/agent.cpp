@@ -14,10 +14,30 @@ double getCPUUsage() {
     return (double)(total - idle) / total * 100.0;
 }
 
+double getMemoryUsage() {
+    std::ifstream file("/proc/meminfo");
+    std::string key;
+    long memTotal = 0, memAvailable = 0;
+
+    while(file >> key) {
+        if(key == "MemTotal:") {
+            file >> memTotal;
+        }
+        else if(key == "MemAvailable:") {
+            file >> memAvailable;
+            break;
+        }
+    }
+
+    return (double)(memTotal - memAvailable) / memTotal * 100.0;
+}
+
+
 int main() {
     while(true) {
         double cpu = getCPUUsage();
-        std::cout << "CPU Usage: " << cpu << "%\n";
+        double mem = getMemoryUsage();
+        std::cout << "CPU Usage: " << cpu << "% | Memory: "<< mem <<"%\n";
         sleep(5);
     }
     return 0;
