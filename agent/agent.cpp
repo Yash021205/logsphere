@@ -5,9 +5,17 @@
 #include <string>
 #include <unistd.h>
 #include <dirent.h>
+#include <unordered_map>
 #include "json.hpp"
 #include <ctime>
+
 using json = nlohmann::json;
+
+std::string getHostname() {
+    char hostname[1024];
+    gethostname(hostname, 1024);
+    return std::string(hostname);
+}
 
 double getCPUUsage() {
     std::ifstream file("/proc/stat");
@@ -26,10 +34,12 @@ std::vector<std::string> readNewLogs(const std::string& path, long &lastPos) {
 
     std::vector<std::string> logs;
     std::string line;
+
     while (std::getline(file, line)) {
-    if (!line.empty())
-        logs.push_back(line);
-}
+        if (!line.empty())
+            logs.push_back(line);
+    }
+
     lastPos = file.tellg();
     return logs;
 }
@@ -40,9 +50,8 @@ double getMemoryUsage() {
     long memTotal = 0, memAvailable = 0;
 
     while(file >> key) {
-        if(key == "MemTotal:") {
+        if(key == "MemTotal:")
             file >> memTotal;
-        }
         else if(key == "MemAvailable:") {
             file >> memAvailable;
             break;
@@ -60,9 +69,8 @@ int getProcessCount() {
     while((entry = readdir(dir)) != NULL) {
         if(entry->d_type == DT_DIR) {
             std::string name = entry->d_name;
-            if(std::all_of(name.begin(), name.end(), ::isdigit)) {
+            if(std::all_of(name.begin(), name.end(), ::isdigit))
                 count++;
-            }
         }
     }
 
@@ -90,7 +98,6 @@ json aggregateLogs(const std::vector<std::string>& logs,
 
     for (const auto& log : logs) {
 
-        // Normalize log (remove timestamp etc.)
         std::string key = normalizeLog(log);
 
         if (store.find(key) == store.end()) {
@@ -115,13 +122,17 @@ json aggregateLogs(const std::vector<std::string>& logs,
     return result;
 }
 
-
 int main() {
+
+    std::string host = getHostname();  // detect hostname once
+
     long lastPos = 0;
     int heartbeat = 0;
+
     std::unordered_map<std::string, LogStat> logStore;
 
     while(true) {
+
         heartbeat++;
 
         double cpu = getCPUUsage();
@@ -131,13 +142,13 @@ int main() {
         auto newLogs = readNewLogs("app.log", lastPos);
         auto aggregated = aggregateLogs(newLogs, logStore);
 
-        std::cout << "CPU: " << cpu 
-                  << "% | Memory: " << mem 
+        std::cout << "CPU: " << cpu
+                  << "% | Memory: " << mem
                   << "% | Processes: " << processes << "\n";
 
-        // Build JSON payload
         json payload;
-        payload["host"] = "yash-machine";
+
+        payload["host"] = host;
         payload["cpu"] = cpu;
         payload["memory"] = mem;
         payload["processes"] = processes;
@@ -146,13 +157,15 @@ int main() {
         if (!aggregated.empty())
             payload["logs"] = aggregated;
 
-        // Send telemetry intelligently
         if (heartbeat % 2 == 0 || !aggregated.empty()) {
+
             std::string data = payload.dump();
+
             std::cout << "Sending: " << data << "\n";
         }
+
         if (!aggregated.empty())
-        logStore.clear();
+            logStore.clear();
 
         sleep(5);
     }
