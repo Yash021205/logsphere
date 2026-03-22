@@ -2,7 +2,8 @@ const Telemetry = require("../models/telemetryModel");
 
 exports.getTrends = async (req, res) => {
   try {
-    const data = await Telemetry.find()
+    const systemId = req.systemId;
+    const data = await Telemetry.find({ systemId })
       .sort({ timestamp: -1 })
       .limit(20);
 
