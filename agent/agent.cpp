@@ -11,13 +11,15 @@
 
 using json = nlohmann::json;
 
-std::string getHostname() {
+std::string getHostname()
+{
     char hostname[1024];
     gethostname(hostname, 1024);
     return std::string(hostname);
 }
 
-double getCPUUsage() {
+double getCPUUsage()
+{
     std::ifstream file("/proc/stat");
     std::string cpu;
     long user, nice, system, idle;
@@ -28,14 +30,16 @@ double getCPUUsage() {
     return (double)(total - idle) / total * 100.0;
 }
 
-std::vector<std::string> readNewLogs(const std::string& path, long &lastPos) {
+std::vector<std::string> readNewLogs(const std::string &path, long &lastPos)
+{
     std::ifstream file(path);
     file.seekg(lastPos);
 
     std::vector<std::string> logs;
     std::string line;
 
-    while (std::getline(file, line)) {
+    while (std::getline(file, line))
+    {
         if (!line.empty())
             logs.push_back(line);
     }
@@ -44,15 +48,18 @@ std::vector<std::string> readNewLogs(const std::string& path, long &lastPos) {
     return logs;
 }
 
-double getMemoryUsage() {
+double getMemoryUsage()
+{
     std::ifstream file("/proc/meminfo");
     std::string key;
     long memTotal = 0, memAvailable = 0;
 
-    while(file >> key) {
-        if(key == "MemTotal:")
+    while (file >> key)
+    {
+        if (key == "MemTotal:")
             file >> memTotal;
-        else if(key == "MemAvailable:") {
+        else if (key == "MemAvailable:")
+        {
             file >> memAvailable;
             break;
         }
@@ -61,15 +68,18 @@ double getMemoryUsage() {
     return (double)(memTotal - memAvailable) / memTotal * 100.0;
 }
 
-int getProcessCount() {
-    DIR* dir = opendir("/proc");
-    struct dirent* entry;
+int getProcessCount()
+{
+    DIR *dir = opendir("/proc");
+    struct dirent *entry;
     int count = 0;
 
-    while((entry = readdir(dir)) != NULL) {
-        if(entry->d_type == DT_DIR) {
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if (entry->d_type == DT_DIR)
+        {
             std::string name = entry->d_name;
-            if(std::all_of(name.begin(), name.end(), ::isdigit))
+            if (std::all_of(name.begin(), name.end(), ::isdigit))
                 count++;
         }
     }
@@ -78,31 +88,38 @@ int getProcessCount() {
     return count;
 }
 
-struct LogStat {
+struct LogStat
+{
     int count;
     time_t firstSeen;
     time_t lastSeen;
 };
 
-std::string normalizeLog(const std::string& log) {
+std::string normalizeLog(const std::string &log)
+{
     size_t pos = log.find(" at ");
     if (pos != std::string::npos)
         return log.substr(0, pos);
     return log;
 }
 
-json aggregateLogs(const std::vector<std::string>& logs,
-                   std::unordered_map<std::string, LogStat>& store) {
+json aggregateLogs(const std::vector<std::string> &logs,
+                   std::unordered_map<std::string, LogStat> &store)
+{
 
     time_t now = time(nullptr);
 
-    for (const auto& log : logs) {
+    for (const auto &log : logs)
+    {
 
         std::string key = normalizeLog(log);
 
-        if (store.find(key) == store.end()) {
+        if (store.find(key) == store.end())
+        {
             store[key] = {1, now, now};
-        } else {
+        }
+        else
+        {
             store[key].count++;
             store[key].lastSeen = now;
         }
@@ -110,7 +127,8 @@ json aggregateLogs(const std::vector<std::string>& logs,
 
     json result = json::array();
 
-    for (auto &it : store) {
+    for (auto &it : store)
+    {
         json entry;
         entry["message"] = it.first;
         entry["count"] = it.second.count;
@@ -122,16 +140,18 @@ json aggregateLogs(const std::vector<std::string>& logs,
     return result;
 }
 
-int main() {
+int main()
+{
 
-    std::string host = getHostname();  // detect hostname once
+    std::string host = getHostname(); // detect hostname once
 
     long lastPos = 0;
     int heartbeat = 0;
 
     std::unordered_map<std::string, LogStat> logStore;
 
-    while(true) {
+    while (true)
+    {
 
         heartbeat++;
 
@@ -147,7 +167,14 @@ int main() {
                   << "% | Processes: " << processes << "\n";
 
         json payload;
+        const char *systemId = getenv("SYSTEM_ID");
 
+        if (!systemId)
+        {
+            std::cerr << "SYSTEM_ID not set\n";
+            return 1;
+        }
+        payload["systemId"] = systemId;
         payload["host"] = host;
         payload["cpu"] = cpu;
         payload["memory"] = mem;
@@ -157,7 +184,8 @@ int main() {
         if (!aggregated.empty())
             payload["logs"] = aggregated;
 
-        if (heartbeat % 2 == 0 || !aggregated.empty()) {
+        if (heartbeat % 2 == 0 || !aggregated.empty())
+        {
 
             std::string data = payload.dump();
 

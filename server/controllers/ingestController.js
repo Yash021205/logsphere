@@ -1,22 +1,55 @@
 const Telemetry = require("../models/telemetryModel");
+const System = require("../models/systemModel");
+const Host = require("../models/hostModel");
 const { checkAlerts } = require("../services/alertService");
 const { classifyLog } = require("../services/logClassifier");
 
 const ingestTelemetry = async (req, res) => {
   try {
     const data = req.body;
+    const io = req.app.get("io");
+    if (!data.systemId) {
+      return res.status(400).send("systemId missing");
+    }
+    // Verify system authentication
+    const system = await System.findOne({
+      systemId: data.systemId,
+      systemKey: data.systemKey
+    });
 
-    // 🔥 1. Classify logs
+    // Host auto-registration
+await Host.findOneAndUpdate(
+  { systemId: data.systemId, host: data.host },
+  {
+    $set: { lastSeen: data.timestamp },
+    $setOnInsert: { firstSeen: data.timestamp }
+  },
+  { upsert: true }
+);
+
+io.emit("host-status", {
+  systemId: data.systemId,
+  host: data.host,
+  lastSeen: data.timestamp,
+  status: "ONLINE"
+});
+
+    if (!system) {
+      return res.status(401).send("Invalid system credentials");
+    }
+
+    //  1. Classify logs
+
     const processedLogs = (data.logs || []).map(log => ({
       message: log.message || log,
       type: classifyLog(log.message || log),
       count: log.count || 1
     }));
 
-    // 🔥 2. Generate dynamic threshold alerts
+    //  2. Generate dynamic threshold alerts
     const alerts = await checkAlerts(data);
 
-    // 🔥 3. Baseline calculation (last 5 minutes)
+    //  3. Baseline calculation (last 5 minutes)
     const fiveMinutesAgo = Math.floor(Date.now() / 1000) - 300;
 
     const recentData = await Telemetry.find({
@@ -32,7 +65,7 @@ const ingestTelemetry = async (req, res) => {
       avgMem = recentData.reduce((sum, d) => sum + d.memory, 0) / recentData.length;
     }
 
-    // 🔥 4. Anomaly detection
+    //  4. Anomaly detection
     let anomalies = [];
 
     if (avgCPU > 0 && data.cpu > avgCPU * 1.1) {
@@ -49,18 +82,20 @@ const ingestTelemetry = async (req, res) => {
       });
     }
 
-    // 🔥 5. Store telemetry WITH alerts + classified logs
+    //  5. Store telemetry WITH alerts + classified logs
     const telemetry = new Telemetry({
-      ...data,
+      systemId: data.systemId,
+      host: data.host,
+      cpu: data.cpu,
+      memory: data.memory,
+      processes: data.processes,
+      timestamp: data.timestamp,
       logs: processedLogs,
       alerts
     });
-
     await telemetry.save();
 
-    // 🔥 6. Emit real-time telemetry
-    const io = req.app.get("io");
-
+    //  6. Emit real-time telemetry
     io.emit("telemetry", {
       host: data.host,
       cpu: data.cpu,
@@ -69,7 +104,7 @@ const ingestTelemetry = async (req, res) => {
       timestamp: data.timestamp
     });
 
-    // 🔥 7. Emit anomalies if found
+    //  7. Emit anomalies if found
     if (anomalies.length > 0) {
       io.emit("anomaly", anomalies);
     }

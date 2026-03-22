@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import axios from "../api/axios";
 
 function SLABanner() {
   const [sla, setSla] = useState(null);

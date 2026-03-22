@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { socket } from "../socket";
-import axios from "axios";
+import axios from "../api/axios";
 import {
   LineChart,
   Line,

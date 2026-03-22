@@ -13,11 +13,15 @@ import HealthCard from "./components/HealthCard";
 import LogBreakdown from "./components/LogBreakdown";
 import SLABanner from "./components/SLABanner";
 import TimeRangeSelector from "./components/TimeRangeSelector"; 
-
+import Login from "./components/Login";
 function App() {
   const [selectedHost, setSelectedHost] = useState("");
   const [range, setRange] = useState(5); 
+  const token = localStorage.getItem("token");
 
+  if (!token) {
+    return <Login />;
+  }
   return (
     <div style={{
       width: "100vw",

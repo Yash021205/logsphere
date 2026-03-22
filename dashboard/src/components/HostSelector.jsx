@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import axios from "../api/axios";
 
 function HostSelector({ selectedHost, setSelectedHost }) {
   const [hosts, setHosts] = useState([]);
