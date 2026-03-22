@@ -12,7 +12,10 @@ const TelemetrySchema = new mongoose.Schema({
   processes: Number,
   logs: Array,
   alerts: Array,  
-  timestamp: Number
+  timestamp: {
+    type: Date,
+    index: { expires: 3600 }
+  }
 });
 
 module.exports = mongoose.model("Telemetry", TelemetrySchema);
