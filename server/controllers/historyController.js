@@ -2,18 +2,21 @@ const Telemetry = require("../models/telemetryModel");
 
 exports.getComparison = async (req, res) => {
   try {
+    const systemId = req.systemId;
     const now = Date.now();
     const oneDay = 24 * 60 * 60 * 1000;
 
-    const todayStart = now - oneDay;
-    const yesterdayStart = now - 2 * oneDay;
+    const todayStart = new Date(now - oneDay);
+    const yesterdayStart = new Date(now - 2 * oneDay);
 
     const todayData = await Telemetry.find({
-      timestamp: { $gte: todayStart / 1000 }
+      systemId,
+      timestamp: { $gte: todayStart }
     });
 
     const yesterdayData = await Telemetry.find({
-      timestamp: { $gte: yesterdayStart / 1000, $lt: todayStart / 1000 }
+      systemId,
+      timestamp: { $gte: yesterdayStart, $lt: todayStart }
     });
 
     const avg = arr => arr.reduce((a, b) => a + b, 0) / (arr.length || 1);

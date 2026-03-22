@@ -39,8 +39,21 @@ const io = new Server(server, {
   cors: { origin: "*" }
 });
 
+const jwt = require("jsonwebtoken");
+
 io.on("connection", (socket) => {
   console.log("Client connected");
+
+  socket.on("authenticate", (token) => {
+    try {
+      if (!token) return;
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      socket.join(decoded.systemId);
+      console.log(`Socket authenticated and joined room: ${decoded.systemId}`);
+    } catch (err) {
+      console.error("Socket authentication failed");
+    }
+  });
 });
 
 app.set("io", io);

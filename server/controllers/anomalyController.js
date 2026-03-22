@@ -3,9 +3,10 @@ const Telemetry = require("../models/telemetryModel");
 const getBaseline = async (req, res) => {
   try {
     const { host } = req.query;
-    const fiveMinutesAgo = Math.floor(Date.now() / 1000) - 300;
+    const systemId = req.systemId;
+    const fiveMinutesAgo = new Date(Date.now() - 300 * 1000);
 
-    const query = { timestamp: { $gte: fiveMinutesAgo } };
+    const query = { systemId, timestamp: { $gte: fiveMinutesAgo } };
     if (host) query.host = host;
 
     const data = await Telemetry.find(query);

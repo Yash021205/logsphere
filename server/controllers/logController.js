@@ -2,7 +2,8 @@ const Telemetry = require("../models/telemetryModel");
 
 const getLogs = async (req, res) => {
   try {
-    const data = await Telemetry.find()
+    const systemId = req.systemId;
+    const data = await Telemetry.find({ systemId })
       .sort({ timestamp: -1 })
       .limit(50);
     const logs = [];

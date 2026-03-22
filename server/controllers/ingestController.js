@@ -27,7 +27,7 @@ await Host.findOneAndUpdate(
   { upsert: true }
 );
 
-io.emit("host-status", {
+io.to(data.systemId).emit("host-status", {
   systemId: data.systemId,
   host: data.host,
   lastSeen: data.timestamp,
@@ -50,9 +50,10 @@ io.emit("host-status", {
     const alerts = await checkAlerts(data);
 
     //  3. Baseline calculation (last 5 minutes)
-    const fiveMinutesAgo = Math.floor(Date.now() / 1000) - 300;
+    const fiveMinutesAgo = new Date(Date.now() - 300 * 1000);
 
     const recentData = await Telemetry.find({
+      systemId: data.systemId,
       host: data.host,
       timestamp: { $gte: fiveMinutesAgo }
     });
@@ -96,7 +97,7 @@ io.emit("host-status", {
     await telemetry.save();
 
     //  6. Emit real-time telemetry
-    io.emit("telemetry", {
+    io.to(data.systemId).emit("telemetry", {
       host: data.host,
       cpu: data.cpu,
       memory: data.memory,
@@ -106,7 +107,7 @@ io.emit("host-status", {
 
     //  7. Emit anomalies if found
     if (anomalies.length > 0) {
-      io.emit("anomaly", anomalies);
+      io.to(data.systemId).emit("anomaly", anomalies);
     }
 
     res.status(200).send("Telemetry Stored");

@@ -2,7 +2,8 @@ const Telemetry = require("../models/telemetryModel");
 
 exports.getHealth = async (req, res) => {
   try {
-    const latest = await Telemetry.findOne().sort({ timestamp: -1 });
+    const systemId = req.systemId;
+    const latest = await Telemetry.findOne({ systemId }).sort({ timestamp: -1 });
 
     if (!latest) return res.json({ score: 100, status: "Healthy" });
 
