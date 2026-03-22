@@ -12,6 +12,9 @@ const logRoutes = require("./routes/logRoutes");
 const anomalyRoutes = require("./routes/anomalyroutes");
 const systemRoutes = require("./routes/systemRoutes");
 const authRoutes = require("./routes/authRoutes");
+const { aggregate5Min, aggregate1Hour } = require("./jobs/aggregationJob");
+setInterval(aggregate5Min, 5 * 60 * 1000); // every 5 min
+setInterval(aggregate1Hour, 60 * 60 * 1000); // every hour
 const app = express();
 app.use(cors());
 app.use(express.json());

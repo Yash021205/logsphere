@@ -1,7 +1,7 @@
 import { useState } from "react";
 import axios from "../api/axios";
 
-export default function Login() {
+export default function Login({ onSwitch }) {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -45,6 +45,9 @@ export default function Login() {
       <br /><br />
 
       <button onClick={handleLogin}>Login</button>
+      <p style={{ marginTop: "15px", cursor: "pointer", color: "#60a5fa" }} onClick={onSwitch}>
+        Don't have an account? Sign up
+      </p>
     </div>
   );
 }

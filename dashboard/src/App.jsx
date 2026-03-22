@@ -14,13 +14,15 @@ import LogBreakdown from "./components/LogBreakdown";
 import SLABanner from "./components/SLABanner";
 import TimeRangeSelector from "./components/TimeRangeSelector"; 
 import Login from "./components/Login";
+import Signup from "./components/Signup";
 function App() {
   const [selectedHost, setSelectedHost] = useState("");
   const [range, setRange] = useState(5); 
+  const [isLogin, setIsLogin] = useState(true);
   const token = localStorage.getItem("token");
 
   if (!token) {
-    return <Login />;
+    return isLogin ? <Login onSwitch={() => setIsLogin(false)} /> : <Signup onSwitch={() => setIsLogin(true)} />;
   }
   return (
     <div style={{

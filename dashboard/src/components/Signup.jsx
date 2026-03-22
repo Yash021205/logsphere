@@ -1,7 +1,7 @@
 import { useState } from "react";
 import axios from "../api/axios";
 
-export default function Signup() {
+export default function Signup({ onSwitch }) {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,8 +15,8 @@ export default function Signup() {
         systemId
       });
 
-      alert("Signup successful!");
-
+      alert("Signup successful! Please log in.");
+      onSwitch(); // Switch back to login page
     } catch (err) {
       alert("Signup failed");
     }
@@ -49,6 +49,9 @@ export default function Signup() {
       <br /><br />
 
       <button onClick={handleSignup}>Signup</button>
+      <p style={{ marginTop: "15px", cursor: "pointer", color: "#60a5fa" }} onClick={onSwitch}>
+        Already have an account? Log in
+      </p>
     </div>
   );
 }

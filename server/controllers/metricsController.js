@@ -1,4 +1,6 @@
 const Telemetry = require("../models/telemetryModel");
+const Telemetry5Min = require("../models/telemetry5minModel");
+const Telemetry1Hour = require("../models/telemetry1hrModel");
 
 const getCPU = async (req, res) => {
   try {
@@ -6,6 +8,7 @@ const getCPU = async (req, res) => {
     const { last = 30, host, minutes } = req.query;
     const systemId = req.systemId;
 
+    let Model = Telemetry;
     let query = { systemId };
 
     if (host) {
@@ -13,11 +16,17 @@ const getCPU = async (req, res) => {
     }
 
     if (minutes) {
-      const secondsAgo = Math.floor(Date.now() / 1000) - (minutes * 60);
-      query.timestamp = { $gte: secondsAgo };
+      const timeAgo = new Date(Date.now() - (minutes * 60 * 1000));
+      query.timestamp = { $gte: timeAgo };
+      
+      if (minutes > 1440) {
+        Model = Telemetry1Hour;
+      } else if (minutes > 60) {
+        Model = Telemetry5Min;
+      }
     }
 
-    const data = await Telemetry.find(query)
+    const data = await Model.find(query)
       .sort({ timestamp: minutes ? 1 : -1 })
       .limit(minutes ? 1000 : parseInt(last));
 
@@ -39,6 +48,7 @@ const getMemory = async (req, res) => {
     const { last = 30, host, minutes } = req.query;
     const systemId = req.systemId;
 
+    let Model = Telemetry;
     let query = { systemId };
 
     if (host) {
@@ -46,11 +56,17 @@ const getMemory = async (req, res) => {
     }
 
     if (minutes) {
-      const secondsAgo = Math.floor(Date.now() / 1000) - (minutes * 60);
-      query.timestamp = { $gte: secondsAgo };
+      const timeAgo = new Date(Date.now() - (minutes * 60 * 1000));
+      query.timestamp = { $gte: timeAgo };
+
+      if (minutes > 1440) {
+        Model = Telemetry1Hour;
+      } else if (minutes > 60) {
+        Model = Telemetry5Min;
+      }
     }
 
-    const data = await Telemetry.find(query)
+    const data = await Model.find(query)
       .sort({ timestamp: minutes ? 1 : -1 })
       .limit(minutes ? 1000 : parseInt(last));
 
