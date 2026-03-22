@@ -2,9 +2,11 @@ const Telemetry = require("../models/telemetryModel");
 
 exports.checkSLA = async (req, res) => {
   try {
-    const fiveMinutesAgo = Math.floor(Date.now() / 1000) - 300;
+    const systemId = req.systemId;
+    const fiveMinutesAgo = new Date(Date.now() - 300 * 1000);
 
     const recent = await Telemetry.find({
+      systemId,
       timestamp: { $gte: fiveMinutesAgo }
     });
 

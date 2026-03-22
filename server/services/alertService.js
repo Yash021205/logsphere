@@ -1,10 +1,9 @@
 const AlertRule = require("../models/alertruleModel");
 
 exports.checkAlerts = async (data) => {
-  const rule = await AlertRule.findOne();
+  const rule = await AlertRule.findOne({ systemId: data.systemId });
 
   if (!rule) {
-    console.log(" No alert rule found in DB");
     return [];
   }
   const alerts = [];
