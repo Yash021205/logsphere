@@ -3,156 +3,287 @@
 #include <fstream>
 #include <algorithm>
 #include <string>
-#include <unistd.h>
-#include <dirent.h>
 #include <unordered_map>
-#include "json.hpp"
+#include <sstream>
 #include <ctime>
+#include <sstream>
 
-using json = nlohmann::json;
+// --- OS-Specific Headers ---
+#ifdef _WIN32
+    #ifndef _WIN32_WINNT
+    #define _WIN32_WINNT 0x0600
+    #endif
+    #include <windows.h>
+    #include <psapi.h>
+    #pragma comment(lib, "psapi.lib")
+    #pragma warning(disable : 4996) // Disable getenv unsafe warning
+#else
+    #include <unistd.h>
+    #include <dirent.h>
+#endif
 
-std::string getHostname()
-{
-    char hostname[1024];
-    gethostname(hostname, 1024);
-    return std::string(hostname);
-}
 
-double getCPUUsage()
-{
-    std::ifstream file("/proc/stat");
-    std::string cpu;
-    long user, nice, system, idle;
-
-    file >> cpu >> user >> nice >> system >> idle;
-    long total = user + nice + system + idle;
-
-    return (double)(total - idle) / total * 100.0;
-}
-
-std::vector<std::string> readNewLogs(const std::string &path, long &lastPos)
-{
-    std::ifstream file(path);
-    file.seekg(lastPos);
-
-    std::vector<std::string> logs;
-    std::string line;
-
-    while (std::getline(file, line))
-    {
-        if (!line.empty())
-            logs.push_back(line);
-    }
-
-    lastPos = file.tellg();
-    return logs;
-}
-
-double getMemoryUsage()
-{
-    std::ifstream file("/proc/meminfo");
-    std::string key;
-    long memTotal = 0, memAvailable = 0;
-
-    while (file >> key)
-    {
-        if (key == "MemTotal:")
-            file >> memTotal;
-        else if (key == "MemAvailable:")
-        {
-            file >> memAvailable;
-            break;
+static std::string jsonEscape(const std::string &s) {
+    std::ostringstream o;
+    for (char c : s) {
+        switch (c) {
+            case '"': o << "\\\""; break;
+            case '\\': o << "\\\\"; break;
+            case '\b': o << "\\b"; break;
+            case '\f': o << "\\f"; break;
+            case '\n': o << "\\n"; break;
+            case '\r': o << "\\r"; break;
+            case '\t': o << "\\t"; break;
+            default:
+                if ((unsigned char)c < 0x20) {
+                    o << "\\u" << std::hex << (int)c;
+                } else {
+                    o << c;
+                }
         }
     }
-
-    return (double)(memTotal - memAvailable) / memTotal * 100.0;
+    return o.str();
 }
 
-int getProcessCount()
-{
-    DIR *dir = opendir("/proc");
-    struct dirent *entry;
-    int count = 0;
-
-    while ((entry = readdir(dir)) != NULL)
-    {
-        if (entry->d_type == DT_DIR)
-        {
-            std::string name = entry->d_name;
-            if (std::all_of(name.begin(), name.end(), ::isdigit))
-                count++;
-        }
-    }
-
-    closedir(dir);
-    return count;
+static std::string getJsonStringValue(const std::string &s, const std::string &key) {
+    std::string pattern = "\"" + key + "\"";
+    size_t pos = s.find(pattern);
+    if (pos == std::string::npos) return "";
+    size_t colon = s.find(':', pos);
+    if (colon == std::string::npos) return "";
+    size_t firstQuote = s.find('"', colon);
+    if (firstQuote == std::string::npos) return "";
+    size_t secondQuote = s.find('"', firstQuote + 1);
+    if (secondQuote == std::string::npos) return "";
+    return s.substr(firstQuote + 1, secondQuote - firstQuote - 1);
 }
 
-struct LogStat
-{
+struct LogStat {
     int count;
     time_t firstSeen;
     time_t lastSeen;
 };
 
-std::string normalizeLog(const std::string &log)
-{
+// --- Cross-Platform Helper Functions ---
+
+void agentSleep(int seconds) {
+#ifdef _WIN32
+    Sleep(seconds * 1000);
+#else
+    sleep(seconds);
+#endif
+}
+
+std::string getHostname() {
+#ifdef _WIN32
+    char hostname[MAX_COMPUTERNAME_LENGTH + 1];
+    DWORD size = sizeof(hostname);
+    if (GetComputerNameA(hostname, &size)) {
+        return std::string(hostname);
+    }
+    return "Unknown-Windows";
+#else
+    char hostname[1024];
+    if (gethostname(hostname, 1024) == 0) {
+        return std::string(hostname);
+    }
+    return "Unknown-Linux";
+#endif
+}
+
+#ifdef _WIN32
+static unsigned long long FileTimeToInt64(const FILETIME& ft) {
+    return (((unsigned long long)(ft.dwHighDateTime)) << 32) | ((unsigned long long)ft.dwLowDateTime);
+}
+#endif
+
+double getCPUUsage() {
+#ifdef _WIN32
+    static unsigned long long previousTotalTicks = 0;
+    static unsigned long long previousIdleTicks = 0;
+
+    FILETIME idleTime, kernelTime, userTime;
+    typedef BOOL (WINAPI *GetSystemTimes_t)(LPFILETIME, LPFILETIME, LPFILETIME);
+    static GetSystemTimes_t pGetSystemTimes = nullptr;
+    if (!pGetSystemTimes) {
+        HMODULE h = GetModuleHandleA("kernel32.dll");
+        if (h) pGetSystemTimes = (GetSystemTimes_t)GetProcAddress(h, "GetSystemTimes");
+    }
+    if (pGetSystemTimes && pGetSystemTimes(&idleTime, &kernelTime, &userTime)) {
+        unsigned long long idleTicks = FileTimeToInt64(idleTime);
+        unsigned long long totalTicks = FileTimeToInt64(kernelTime) + FileTimeToInt64(userTime);
+
+        unsigned long long totalTicksSinceLastTime = totalTicks - previousTotalTicks;
+        unsigned long long idleTicksSinceLastTime  = idleTicks - previousIdleTicks;
+
+        double ret = 0.0;
+        if (totalTicksSinceLastTime > 0) {
+            ret = 100.0 - ((100.0 * idleTicksSinceLastTime) / totalTicksSinceLastTime);
+        }
+
+        previousTotalTicks = totalTicks;
+        previousIdleTicks = idleTicks;
+        return ret;
+    }
+    return 0.0;
+#else
+    std::ifstream file("/proc/stat");
+    std::string cpu;
+    long user, nice, system, idle;
+    if (file >> cpu >> user >> nice >> system >> idle) {
+        long total = user + nice + system + idle;
+        if (total > 0) return (double)(total - idle) / total * 100.0;
+    }
+    return 0.0;
+#endif
+}
+
+double getMemoryUsage() {
+#ifdef _WIN32
+    MEMORYSTATUSEX memInfo;
+    memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+    if (GlobalMemoryStatusEx(&memInfo)) {
+        DWORDLONG totalPhysMem = memInfo.ullTotalPhys;
+        DWORDLONG physMemUsed = memInfo.ullTotalPhys - memInfo.ullAvailPhys;
+        if (totalPhysMem > 0) return (double)physMemUsed / totalPhysMem * 100.0;
+    }
+    return 0.0;
+#else
+    std::ifstream file("/proc/meminfo");
+    std::string key;
+    long memTotal = 0, memAvailable = 0;
+    while (file >> key) {
+        if (key == "MemTotal:")
+            file >> memTotal;
+        else if (key == "MemAvailable:") {
+            file >> memAvailable;
+            break;
+        }
+    }
+    if (memTotal > 0) return (double)(memTotal - memAvailable) / memTotal * 100.0;
+    return 0.0;
+#endif
+}
+
+int getProcessCount() {
+#ifdef _WIN32
+    DWORD aProcesses[1024], cbNeeded, cProcesses;
+    if (EnumProcesses(aProcesses, sizeof(aProcesses), &cbNeeded)) {
+        cProcesses = cbNeeded / sizeof(DWORD);
+        return (int)cProcesses;
+    }
+    return 0;
+#else
+    DIR *dir = opendir("/proc");
+    struct dirent *entry;
+    int count = 0;
+    if (dir != NULL) {
+        while ((entry = readdir(dir)) != NULL) {
+            if (entry->d_type == DT_DIR) {
+                std::string name = entry->d_name;
+                if (std::all_of(name.begin(), name.end(), ::isdigit)) {
+                    count++;
+                }
+            }
+        }
+        closedir(dir);
+    }
+    return count;
+#endif
+}
+
+// --- End Cross-Platform Helpers ---
+
+std::vector<std::string> readNewLogs(const std::string &path, long &lastPos) {
+    std::ifstream file(path);
+    if (!file.is_open()) return {};
+    file.seekg(lastPos);
+    
+    std::vector<std::string> logs;
+    std::string line;
+    
+    while (std::getline(file, line)) {
+        if (!line.empty())
+            logs.push_back(line);
+    }
+    
+    lastPos = file.tellg();
+    if (lastPos == -1) lastPos = 0; 
+    
+    return logs;
+}
+
+std::string normalizeLog(const std::string &log) {
     size_t pos = log.find(" at ");
     if (pos != std::string::npos)
         return log.substr(0, pos);
     return log;
 }
 
-json aggregateLogs(const std::vector<std::string> &logs,
-                   std::unordered_map<std::string, LogStat> &store)
+std::string aggregateLogs(const std::vector<std::string> &logs,
+                          std::unordered_map<std::string, LogStat> &store)
 {
-
     time_t now = time(nullptr);
-
-    for (const auto &log : logs)
-    {
-
+    for (const auto &log : logs) {
         std::string key = normalizeLog(log);
-
-        if (store.find(key) == store.end())
-        {
+        if (store.find(key) == store.end()) {
             store[key] = {1, now, now};
-        }
-        else
-        {
+        } else {
             store[key].count++;
             store[key].lastSeen = now;
         }
     }
 
-    json result = json::array();
-
-    for (auto &it : store)
-    {
-        json entry;
-        entry["message"] = it.first;
-        entry["count"] = it.second.count;
-        entry["first_seen"] = it.second.firstSeen;
-        entry["last_seen"] = it.second.lastSeen;
-        result.push_back(entry);
+    std::ostringstream out;
+    out << "[";
+    bool first = true;
+    for (auto &it : store) {
+        if (!first) out << ",";
+        first = false;
+        out << "{\"message\":\"" << jsonEscape(it.first) << "\",";
+        out << "\"count\":" << it.second.count << ",";
+        out << "\"first_seen\":" << it.second.firstSeen << ",";
+        out << "\"last_seen\":" << it.second.lastSeen << "}";
     }
-
-    return result;
+    out << "]";
+    return out.str();
 }
 
-int main()
-{
-
-    std::string host = getHostname(); // detect hostname once
-
+int main() {
+    std::string host = getHostname();
     long lastPos = 0;
     int heartbeat = 0;
 
     std::unordered_map<std::string, LogStat> logStore;
 
-    while (true)
-    {
+    // Read config.json (simple parser, no external JSON lib)
+    std::string sysIdStr;
+    std::string sysKeyStr;
 
+    std::ifstream configFile("config.json");
+    if (configFile.is_open()) {
+        std::ostringstream ss;
+        ss << configFile.rdbuf();
+        std::string cfg = ss.str();
+        sysIdStr = getJsonStringValue(cfg, "systemId");
+        sysKeyStr = getJsonStringValue(cfg, "systemKey");
+    }
+
+    // Fallback to environment variables if not found in config
+    if (sysIdStr.empty() && getenv("SYSTEM_ID")) {
+        sysIdStr = getenv("SYSTEM_ID");
+    }
+    if (sysKeyStr.empty() && getenv("SYSTEM_KEY")) {
+        sysKeyStr = getenv("SYSTEM_KEY");
+    }
+
+    if (sysIdStr.empty() || sysKeyStr.empty()) {
+        std::cerr << "CRITICAL ERROR: systemId or systemKey not found!\n"
+                  << "Please create a config.json file with these keys or set the SYSTEM_ID and SYSTEM_KEY environment variables.\n";
+        return 1; // Exit immediately if credentials are missing
+    }
+
+    while (true) {
         heartbeat++;
 
         double cpu = getCPUUsage();
@@ -166,35 +297,30 @@ int main()
                   << "% | Memory: " << mem
                   << "% | Processes: " << processes << "\n";
 
-        json payload;
-        const char *systemId = getenv("SYSTEM_ID");
-
-        if (!systemId)
-        {
-            std::cerr << "SYSTEM_ID not set\n";
-            return 1;
+        std::ostringstream payload;
+        payload << "{";
+        payload << "\"systemId\":\"" << jsonEscape(sysIdStr) << "\",";
+        payload << "\"systemKey\":\"" << jsonEscape(sysKeyStr) << "\",";
+        payload << "\"host\":\"" << jsonEscape(host) << "\",";
+        payload << "\"cpu\":" << cpu << ",";
+        payload << "\"memory\":" << mem << ",";
+        payload << "\"processes\":" << processes << ",";
+        payload << "\"timestamp\":" << time(nullptr);
+        if (!aggregated.empty()) {
+            payload << ",\"logs\":" << aggregated;
         }
-        payload["systemId"] = systemId;
-        payload["host"] = host;
-        payload["cpu"] = cpu;
-        payload["memory"] = mem;
-        payload["processes"] = processes;
-        payload["timestamp"] = time(nullptr);
+        payload << "}";
 
-        if (!aggregated.empty())
-            payload["logs"] = aggregated;
-
-        if (heartbeat % 2 == 0 || !aggregated.empty())
-        {
-
-            std::string data = payload.dump();
-
+        if (heartbeat % 2 == 0 || !aggregated.empty()) {
+            std::string data = payload.str();
             std::cout << "Sending: " << data << "\n";
         }
 
         if (!aggregated.empty())
             logStore.clear();
 
-        sleep(5);
+        agentSleep(5);
     }
+    
+    return 0;
 }
