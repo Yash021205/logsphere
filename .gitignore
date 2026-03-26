@@ -1,0 +1,7 @@
+node_modules/
+agent/agent
+agent/agent_new
+agent/relay.log
+agent/wget-log
+server/.env
+saas_architectural_design.md
