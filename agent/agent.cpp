@@ -6,7 +6,6 @@
 #include <unordered_map>
 #include <sstream>
 #include <ctime>
-#include <sstream>
 
 // --- OS-Specific Headers ---
 #ifdef _WIN32
@@ -22,41 +21,8 @@
     #include <dirent.h>
 #endif
 
-
-static std::string jsonEscape(const std::string &s) {
-    std::ostringstream o;
-    for (char c : s) {
-        switch (c) {
-            case '"': o << "\\\""; break;
-            case '\\': o << "\\\\"; break;
-            case '\b': o << "\\b"; break;
-            case '\f': o << "\\f"; break;
-            case '\n': o << "\\n"; break;
-            case '\r': o << "\\r"; break;
-            case '\t': o << "\\t"; break;
-            default:
-                if ((unsigned char)c < 0x20) {
-                    o << "\\u" << std::hex << (int)c;
-                } else {
-                    o << c;
-                }
-        }
-    }
-    return o.str();
-}
-
-static std::string getJsonStringValue(const std::string &s, const std::string &key) {
-    std::string pattern = "\"" + key + "\"";
-    size_t pos = s.find(pattern);
-    if (pos == std::string::npos) return "";
-    size_t colon = s.find(':', pos);
-    if (colon == std::string::npos) return "";
-    size_t firstQuote = s.find('"', colon);
-    if (firstQuote == std::string::npos) return "";
-    size_t secondQuote = s.find('"', firstQuote + 1);
-    if (secondQuote == std::string::npos) return "";
-    return s.substr(firstQuote + 1, secondQuote - firstQuote - 1);
-}
+#include "json.hpp"
+using json = nlohmann::json;
 
 struct LogStat {
     int count;
@@ -220,8 +186,8 @@ std::string normalizeLog(const std::string &log) {
     return log;
 }
 
-std::string aggregateLogs(const std::vector<std::string> &logs,
-                          std::unordered_map<std::string, LogStat> &store)
+json aggregateLogs(const std::vector<std::string> &logs,
+                   std::unordered_map<std::string, LogStat> &store)
 {
     time_t now = time(nullptr);
     for (const auto &log : logs) {
@@ -234,19 +200,16 @@ std::string aggregateLogs(const std::vector<std::string> &logs,
         }
     }
 
-    std::ostringstream out;
-    out << "[";
-    bool first = true;
+    json result = json::array();
     for (auto &it : store) {
-        if (!first) out << ",";
-        first = false;
-        out << "{\"message\":\"" << jsonEscape(it.first) << "\",";
-        out << "\"count\":" << it.second.count << ",";
-        out << "\"first_seen\":" << it.second.firstSeen << ",";
-        out << "\"last_seen\":" << it.second.lastSeen << "}";
+        json entry;
+        entry["message"] = it.first;
+        entry["count"] = it.second.count;
+        entry["first_seen"] = it.second.firstSeen;
+        entry["last_seen"] = it.second.lastSeen;
+        result.push_back(entry);
     }
-    out << "]";
-    return out.str();
+    return result;
 }
 
 int main() {
@@ -256,17 +219,23 @@ int main() {
 
     std::unordered_map<std::string, LogStat> logStore;
 
-    // Read config.json (simple parser, no external JSON lib)
+    // Read config.json
     std::string sysIdStr;
     std::string sysKeyStr;
 
     std::ifstream configFile("config.json");
     if (configFile.is_open()) {
-        std::ostringstream ss;
-        ss << configFile.rdbuf();
-        std::string cfg = ss.str();
-        sysIdStr = getJsonStringValue(cfg, "systemId");
-        sysKeyStr = getJsonStringValue(cfg, "systemKey");
+        try {
+            json config = json::parse(configFile);
+            if (config.contains("systemId") && config["systemId"].is_string()) {
+                sysIdStr = config["systemId"].get<std::string>();
+            }
+            if (config.contains("systemKey") && config["systemKey"].is_string()) {
+                sysKeyStr = config["systemKey"].get<std::string>();
+            }
+        } catch (...) {
+            std::cerr << "Error parsing config.json. Make sure it's valid JSON.\n";
+        }
     }
 
     // Fallback to environment variables if not found in config
@@ -297,22 +266,20 @@ int main() {
                   << "% | Memory: " << mem
                   << "% | Processes: " << processes << "\n";
 
-        std::ostringstream payload;
-        payload << "{";
-        payload << "\"systemId\":\"" << jsonEscape(sysIdStr) << "\",";
-        payload << "\"systemKey\":\"" << jsonEscape(sysKeyStr) << "\",";
-        payload << "\"host\":\"" << jsonEscape(host) << "\",";
-        payload << "\"cpu\":" << cpu << ",";
-        payload << "\"memory\":" << mem << ",";
-        payload << "\"processes\":" << processes << ",";
-        payload << "\"timestamp\":" << time(nullptr);
-        if (!aggregated.empty()) {
-            payload << ",\"logs\":" << aggregated;
-        }
-        payload << "}";
+        json payload;
+        payload["systemId"] = sysIdStr;
+        payload["systemKey"] = sysKeyStr;
+        payload["host"] = host;
+        payload["cpu"] = cpu;
+        payload["memory"] = mem;
+        payload["processes"] = processes;
+        payload["timestamp"] = time(nullptr);
+
+        if (!aggregated.empty())
+            payload["logs"] = aggregated;
 
         if (heartbeat % 2 == 0 || !aggregated.empty()) {
-            std::string data = payload.str();
+            std::string data = payload.dump();
             std::cout << "Sending: " << data << "\n";
         }
 
