@@ -13,12 +13,15 @@ const UserSchema = new mongoose.Schema({
     required: true
   },
 
+  role: {
+    type: String,
+    enum: ["Admin", "Client"],
+    default: "Client"
+  },
   systemId: {
     type: String,
-    required: true,
     index: true
   },
-
   createdAt: {
     type: Date,
     default: Date.now
