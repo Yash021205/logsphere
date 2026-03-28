@@ -1,34 +1,54 @@
 const User = require("../models/userModel");
+const System = require("../models/systemModel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 
 // REGISTER
 const register = async (req, res) => {
   try {
+    const { email, password, role } = req.body;
 
-    const { email, password, systemId } = req.body;
-
-    if (!email || !password || !systemId) {
-      return res.status(400).send("Missing fields");
+    if (!email || !password) {
+      return res.status(400).send("Missing email or password");
     }
 
     const existingUser = await User.findOne({ email });
-
     if (existingUser) {
       return res.status(400).send("User already exists");
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const userRole = role === "Admin" ? "Admin" : "Client";
+
+    let assignedSystemId = null;
+
+    if (userRole === "Client") {
+      // Auto-generate system credentials for Client
+      assignedSystemId = "sys-" + crypto.randomBytes(4).toString("hex");
+      const systemKey = crypto.randomBytes(16).toString("hex");
+
+      const newSystem = new System({
+        systemId: assignedSystemId,
+        systemKey
+      });
+      await newSystem.save();
+    }
 
     const user = new User({
       email,
       password: hashedPassword,
-      systemId
+      role: userRole,
+      systemId: assignedSystemId
     });
 
     await user.save();
 
-    res.json({ message: "User registered successfully" });
+    res.json({ 
+      message: "User registered successfully",
+      role: userRole,
+      systemId: assignedSystemId
+    });
 
   } catch (err) {
     console.error(err);
@@ -57,7 +77,8 @@ const login = async (req, res) => {
     const token = jwt.sign(
       {
         userId: user._id,
-        systemId: user.systemId
+        systemId: user.systemId,
+        role: user.role
       },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
