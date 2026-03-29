@@ -61,6 +61,7 @@ const login = async (req, res) => {
   try {
 
     const { email, password } = req.body;
+    console.log(`Login attempt for: ${email}`);
 
     const user = await User.findOne({ email });
 
@@ -71,12 +72,14 @@ const login = async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
 
     if (!valid) {
+      console.warn(`Invalid password for: ${email}`);
       return res.status(400).send("Invalid credentials");
     }
 
     const token = jwt.sign(
       {
         userId: user._id,
+        email: user.email,
         systemId: user.systemId,
         role: user.role
       },

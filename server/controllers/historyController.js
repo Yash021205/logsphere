@@ -2,7 +2,16 @@ const Telemetry = require("../models/telemetryModel");
 
 exports.getComparison = async (req, res) => {
   try {
-    const systemId = req.systemId;
+    const { systemId: tokenSystemId, role } = req;
+    const { systemId: querySystemId } = req.query;
+
+    let queryBase = {};
+    if (role === "Admin") {
+      if (querySystemId) queryBase.systemId = querySystemId;
+    } else {
+      queryBase.systemId = tokenSystemId;
+    }
+
     const now = Date.now();
     const oneDay = 24 * 60 * 60 * 1000;
 
@@ -10,12 +19,12 @@ exports.getComparison = async (req, res) => {
     const yesterdayStart = new Date(now - 2 * oneDay);
 
     const todayData = await Telemetry.find({
-      systemId,
+      ...queryBase,
       timestamp: { $gte: todayStart }
     });
 
     const yesterdayData = await Telemetry.find({
-      systemId,
+      ...queryBase,
       timestamp: { $gte: yesterdayStart, $lt: todayStart }
     });
 

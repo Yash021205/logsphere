@@ -1,14 +1,13 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "../api/axios";
 
-function AlertBanner() {
+function AlertBanner({ systemId }) {
   const [alerts, setAlerts] = useState([]);
 
   useEffect(() => {
     const fetchAlerts = () => {
-      axios.get("http://localhost:5000/alerts")
+      axios.get(`/alerts?${systemId ? `systemId=${systemId}` : ''}`)
         .then(res => {
-          // show only first 2 alerts
           setAlerts(res.data.slice(0, 2));
         })
         .catch(err => console.error(err));
@@ -17,7 +16,7 @@ function AlertBanner() {
     fetchAlerts();
     const interval = setInterval(fetchAlerts, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [systemId]);
 
   if (alerts.length === 0) return null;
 

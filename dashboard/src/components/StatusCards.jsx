@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "../api/axios";
 
-function StatusCards() {
+function StatusCards({ host, systemId }) {
   const [stats, setStats] = useState({
     cpu: 0,
     memory: 0,
@@ -9,8 +9,10 @@ function StatusCards() {
   });
 
   const fetchStats = () => {
+    const urlParams = `${host ? `&host=${host}` : ''}${systemId ? `&systemId=${systemId}` : ''}`;
+    
     axios
-      .get("http://localhost:5000/metrics/cpu?last=1")
+      .get(`/metrics/cpu?last=1${urlParams}`)
       .then(res => {
         if (res.data.length > 0) {
           setStats(prev => ({ ...prev, cpu: res.data[res.data.length - 1].value }));
@@ -18,7 +20,7 @@ function StatusCards() {
       });
 
     axios
-      .get("http://localhost:5000/metrics/memory?last=1")
+      .get(`/metrics/memory?last=1${urlParams}`)
       .then(res => {
         if (res.data.length > 0) {
           setStats(prev => ({ ...prev, memory: res.data[res.data.length - 1].value }));
@@ -26,7 +28,7 @@ function StatusCards() {
       });
 
     axios
-      .get("http://localhost:5000/metrics/cpu?last=1")
+      .get(`/metrics/cpu?last=1${urlParams}`)
       .then(res => {
         if (res.data.length > 0) {
           setStats(prev => ({ ...prev, processes: Math.floor(Math.random() * 50 + 300) }));

@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import axios from "../api/axios";
 
-function HistoryPanel() {
+function HistoryPanel({ systemId }) {
   const [data, setData] = useState(null);
 
   useEffect(() => {
-    axios.get("http://localhost:5000/history")
+    axios.get(`/history?${systemId ? `systemId=${systemId}` : ''}`)
       .then(res => setData(res.data))
       .catch(err => console.error(err));
-  }, []);
+  }, [systemId]);
 
   if (!data) return null;
 

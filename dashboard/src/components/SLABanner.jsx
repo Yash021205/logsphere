@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
 import axios from "../api/axios";
 
-function SLABanner() {
+function SLABanner({ systemId }) {
   const [sla, setSla] = useState(null);
 
   useEffect(() => {
     const fetchSLA = async () => {
-      const res = await axios.get("http://localhost:5000/sla");
+      const res = await axios.get(`/sla?${systemId ? `systemId=${systemId}` : ''}`);
       setSla(res.data);
     };
 
     fetchSLA();
     const interval = setInterval(fetchSLA, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [systemId]);
 
   if (!sla || !sla.violation) return null;
 

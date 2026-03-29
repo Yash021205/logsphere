@@ -4,12 +4,12 @@ import { PieChart, Pie, Cell, Tooltip } from "recharts";
 
 const COLORS = ["#ef4444", "#f59e0b", "#3b82f6", "#22c55e", "#94a3b8"];
 
-function LogBreakdown() {
+function LogBreakdown({ systemId }) {
   const [data, setData] = useState([]);
 
   useEffect(() => {
     const fetchStats = async () => {
-      const res = await axios.get("http://localhost:5000/log-stats");
+      const res = await axios.get(`/log-stats?${systemId ? `systemId=${systemId}` : ''}`);
       const formatted = Object.entries(res.data).map(([name, value]) => ({
         name,
         value
@@ -20,7 +20,7 @@ function LogBreakdown() {
     fetchStats();
     const interval = setInterval(fetchStats, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [systemId]);
 
   return (
     <div style={{ background:"#0f172a", padding:"20px", borderRadius:"10px", marginBottom:"20px" }}>

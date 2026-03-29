@@ -5,23 +5,24 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
 
-function CpuChart({ host , range }) {
+function CpuChart({ host, range, systemId }) {
   const [data, setData] = useState([]);
   
   useEffect(() => {
-  axios.get(`http://localhost:5000/metrics/cpu?minutes=${range}&host=${host}`)
-    .then(res => {
-      const history = res.data.map(d => ({
-        time: new Date(d.time * 1000).toLocaleTimeString(),
-        value: d.value
-      }));
-      setData(history);
-    });
-}, [range, host]);
+    axios.get(`/metrics/cpu?minutes=${range}&host=${host}${systemId ? `&systemId=${systemId}` : ''}`)
+      .then(res => {
+        const history = res.data.map(d => ({
+          time: new Date(d.time * 1000).toLocaleTimeString(),
+          value: d.value
+        }));
+        setData(history);
+      });
+  }, [range, host, systemId]);
 
   useEffect(() => {
     socket.on("telemetry", (msg) => {
       if (host && msg.host !== host) return;
+      if (systemId && msg.systemId !== systemId) return;
 
       setData(prev => [
         ...prev.slice(-29),
@@ -33,7 +34,7 @@ function CpuChart({ host , range }) {
     });
 
     return () => socket.off("telemetry");
-  }, [host]);
+  }, [host, systemId]);
 
   return (
     <div style={{ background: "#020617", padding: "20px", borderRadius: "10px" }}>

@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
 import axios from "../api/axios";
 
-function ForecastPanel() {
+function ForecastPanel({ systemId }) {
   const [forecast, setForecast] = useState(null);
 
   useEffect(() => {
     const fetchForecast = async () => {
-      const res = await axios.get("http://localhost:5000/predict");
+      const res = await axios.get(`/predict?${systemId ? `systemId=${systemId}` : ''}`);
       setForecast(res.data);
     };
 
     fetchForecast();
     const interval = setInterval(fetchForecast, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [systemId]);
 
   if (!forecast) return null;
 

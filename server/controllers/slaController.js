@@ -2,13 +2,18 @@ const Telemetry = require("../models/telemetryModel");
 
 exports.checkSLA = async (req, res) => {
   try {
-    const systemId = req.systemId;
-    const fiveMinutesAgo = new Date(Date.now() - 300 * 1000);
+    const { systemId: tokenSystemId, role } = req;
+    const { systemId: querySystemId } = req.query;
 
-    const recent = await Telemetry.find({
-      systemId,
-      timestamp: { $gte: fiveMinutesAgo }
-    });
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    let query = { timestamp: { $gte: fiveMinutesAgo } };
+    if (role === "Admin") {
+      if (querySystemId) query.systemId = querySystemId;
+    } else {
+      query.systemId = tokenSystemId;
+    }
+
+    const recent = await Telemetry.find(query);
 
     if (recent.length === 0) return res.json({ violation: false });
 

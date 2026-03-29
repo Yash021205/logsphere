@@ -2,8 +2,19 @@ const Telemetry = require("../models/telemetryModel");
 
 const getLogs = async (req, res) => {
   try {
-    const systemId = req.systemId;
-    const data = await Telemetry.find({ systemId })
+    const { systemId: tokenSystemId, role } = req;
+    const { systemId: querySystemId, host } = req.query;
+
+    let query = {};
+    if (role === "Admin") {
+      if (querySystemId) query.systemId = querySystemId;
+    } else {
+      query.systemId = tokenSystemId;
+    }
+
+    if (host) query.host = host;
+
+    const data = await Telemetry.find(query)
       .sort({ timestamp: -1 })
       .limit(50);
     const logs = [];

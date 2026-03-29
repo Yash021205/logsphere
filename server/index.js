@@ -48,10 +48,20 @@ io.on("connection", (socket) => {
     try {
       if (!token) return;
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      socket.user = decoded;
       socket.join(decoded.systemId);
-      console.log(`Socket authenticated and joined room: ${decoded.systemId}`);
+      console.log(`Socket authenticated: ${decoded.email} (${decoded.role})`);
     } catch (err) {
       console.error("Socket authentication failed");
+    }
+  });
+
+  socket.on("join-system", (systemId) => {
+    if (socket.user && socket.user.role === "Admin") {
+      // Leave previous system rooms if any (optional, but cleaner)
+      // For now, just join the new one
+      socket.join(systemId);
+      console.log(`Admin joined system room: ${systemId}`);
     }
   });
 });

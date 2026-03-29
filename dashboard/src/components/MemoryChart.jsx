@@ -11,11 +11,11 @@ import {
   ResponsiveContainer
 } from "recharts";
 
-function MemoryChart({ host, range }) {
+function MemoryChart({ host, range, systemId }) {
   const [data, setData] = useState([]);
   
   useEffect(() => {
-    axios.get(`http://localhost:5000/metrics/memory?minutes=${range}&host=${host}`)
+    axios.get(`/metrics/memory?minutes=${range}&host=${host}${systemId ? `&systemId=${systemId}` : ''}`)
       .then(res => {
         const history = res.data.map(d => ({
           time: new Date(d.time * 1000).toLocaleTimeString(),
@@ -23,11 +23,12 @@ function MemoryChart({ host, range }) {
         }));
         setData(history);
       });
-  }, [range, host]);
+  }, [range, host, systemId]);
   
   useEffect(() => {
     socket.on("telemetry", (msg) => {
       if (host && msg.host !== host) return;
+      if (systemId && msg.systemId !== systemId) return;
 
       setData(prev => [
         ...prev.slice(-29),
@@ -39,7 +40,7 @@ function MemoryChart({ host, range }) {
     });
 
     return () => socket.off("telemetry");
-  }, [host]);
+  }, [host, systemId]);
 
   return (
     <div style={{ background: "#020617", padding: "20px", borderRadius: "10px" }}>

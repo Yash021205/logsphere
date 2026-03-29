@@ -1,17 +1,24 @@
 import { useEffect, useState } from "react";
 import { socket } from "../socket";
 
-function AnomalyBanner() {
+function AnomalyBanner({ systemId }) {
   const [alerts, setAlerts] = useState([]);
 
   useEffect(() => {
     socket.on("anomaly", (data) => {
-      setAlerts(data);
-      setTimeout(() => setAlerts([]), 7000);
+      // Filter anomaly alerts by systemId if provided
+      const filtered = systemId 
+        ? data.filter(a => a.systemId === systemId)
+        : data;
+        
+      if (filtered.length > 0) {
+        setAlerts(filtered);
+        setTimeout(() => setAlerts([]), 7000);
+      }
     });
 
     return () => socket.off("anomaly");
-  }, []);
+  }, [systemId]);
 
   if (alerts.length === 0) return null;
 

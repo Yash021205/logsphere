@@ -2,11 +2,18 @@ const Telemetry = require("../models/telemetryModel");
 
 const getBaseline = async (req, res) => {
   try {
-    const { host } = req.query;
-    const systemId = req.systemId;
+    const { host, systemId: querySystemId } = req.query;
+    const { systemId: tokenSystemId, role } = req;
     const fiveMinutesAgo = new Date(Date.now() - 300 * 1000);
 
-    const query = { systemId, timestamp: { $gte: fiveMinutesAgo } };
+    let query = { timestamp: { $gte: fiveMinutesAgo } };
+    
+    if (role === "Admin") {
+      if (querySystemId) query.systemId = querySystemId;
+    } else {
+      query.systemId = tokenSystemId;
+    }
+
     if (host) query.host = host;
 
     const data = await Telemetry.find(query);

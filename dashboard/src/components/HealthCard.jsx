@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
 import axios from "../api/axios";
 
-function HealthCard() {
+function HealthCard({ systemId }) {
   const [health, setHealth] = useState(null);
 
   useEffect(() => {
     const fetchHealth = async () => {
-      const res = await axios.get("http://localhost:5000/health");
+      const res = await axios.get(`/health?${systemId ? `systemId=${systemId}` : ''}`);
       setHealth(res.data);
     };
 
     fetchHealth();
     const interval = setInterval(fetchHealth, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [systemId]);
 
   if (!health) return null;
 

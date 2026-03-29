@@ -2,22 +2,23 @@ import { useEffect, useState } from "react";
 import axios from "../api/axios";
 import { socket } from "../socket";
 
-function LogTable({ host }) {
+function LogTable({ host, systemId }) {
   const [logs, setLogs] = useState([]);
   const [search, setSearch] = useState("");
 
   // Initial load (history)
   useEffect(() => {
     axios
-      .get(`http://localhost:5000/logs?host=${host}`)
+      .get(`/logs?host=${host}${systemId ? `&systemId=${systemId}` : ''}`)
       .then(res => setLogs(res.data))
       .catch(err => console.error(err));
-  }, [host]);
+  }, [host, systemId]);
 
   // Real-time updates
   useEffect(() => {
     socket.on("telemetry", (msg) => {
       if (host && msg.host !== host) return;
+      if (systemId && msg.systemId !== systemId) return;
 
       if (msg.logs && msg.logs.length > 0) {
         const newLogs = msg.logs.map(l => ({
@@ -32,7 +33,7 @@ function LogTable({ host }) {
     });
 
     return () => socket.off("telemetry");
-  }, [host]);
+  }, [host, systemId]);
 
   const getSeverityColor = (msg) => {
     if (msg.toLowerCase().includes("error")) return "#ef4444";

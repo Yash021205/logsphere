@@ -98,6 +98,7 @@ io.to(data.systemId).emit("host-status", {
 
     //  6. Emit real-time telemetry
     io.to(data.systemId).emit("telemetry", {
+      systemId: data.systemId,
       host: data.host,
       cpu: data.cpu,
       memory: data.memory,
@@ -107,7 +108,8 @@ io.to(data.systemId).emit("host-status", {
 
     //  7. Emit anomalies if found
     if (anomalies.length > 0) {
-      io.to(data.systemId).emit("anomaly", anomalies);
+      const anomalyPayload = anomalies.map(a => ({ ...a, systemId: data.systemId }));
+      io.to(data.systemId).emit("anomaly", anomalyPayload);
     }
 
     res.status(200).send("Telemetry Stored");

@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import axios from "../api/axios";
 
-function HostSelector({ selectedHost, setSelectedHost }) {
+function HostSelector({ selectedHost, setSelectedHost, systemId }) {
   const [hosts, setHosts] = useState([]);
 
   useEffect(() => {
-    axios.get("http://localhost:5000/hosts")
+    axios.get(`/hosts?${systemId ? `systemId=${systemId}` : ''}`)
       .then(res => setHosts(res.data))
       .catch(err => console.error(err));
-  }, []);
+  }, [systemId]);
 
   return (
     <select
