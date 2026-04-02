@@ -2,15 +2,7 @@ const Telemetry = require("../models/telemetryModel");
 
 exports.getComparison = async (req, res) => {
   try {
-    const { systemId: tokenSystemId, role } = req;
-    const { systemId: querySystemId } = req.query;
-
-    let queryBase = {};
-    if (role === "Admin") {
-      if (querySystemId) queryBase.systemId = querySystemId;
-    } else {
-      queryBase.systemId = tokenSystemId;
-    }
+    let queryBase = { ...req.systemFilter };
 
     const now = Date.now();
     const oneDay = 24 * 60 * 60 * 1000;

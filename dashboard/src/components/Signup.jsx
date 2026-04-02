@@ -7,13 +7,15 @@ export default function Signup({ onSwitch }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("Client");
+  const [adminEmail, setAdminEmail] = useState("");
 
   const handleSignup = async () => {
     try {
       await axios.post("/auth/register", {
         email,
         password,
-        role
+        role,
+        ...(role === "Client" && { adminEmail })
       });
 
       alert("Signup successful! Please log in.");
@@ -52,6 +54,16 @@ export default function Signup({ onSwitch }) {
           <option value="Admin">Admin (Full Visibility)</option>
         </select>
       </div>
+
+      {role === "Client" && (
+        <input
+          className="btn-secondary"
+          style={{ background: 'rgba(255,255,255,0.05)', textAlign: 'left', cursor: 'text' }}
+          placeholder="Admin Email"
+          value={adminEmail}
+          onChange={(e) => setAdminEmail(e.target.value)}
+        />
+      )}
 
       <button className="btn-primary" onClick={handleSignup} style={{ marginTop: '10px' }}>Signup</button>
       <p style={{ marginTop: "10px", cursor: "pointer", color: "#6366f1", textAlign: 'center' }} onClick={onSwitch}>

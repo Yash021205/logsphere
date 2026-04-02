@@ -22,6 +22,12 @@ const UserSchema = new mongoose.Schema({
     type: String,
     index: true
   },
+  adminEmail: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    index: true
+  },
   createdAt: {
     type: Date,
     default: Date.now

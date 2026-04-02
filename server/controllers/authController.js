@@ -7,10 +7,22 @@ const crypto = require("crypto");
 // REGISTER
 const register = async (req, res) => {
   try {
-    const { email, password, role } = req.body;
+    const { email, password, role, adminEmail } = req.body;
 
     if (!email || !password) {
       return res.status(400).send("Missing email or password");
+    }
+
+    const userRole = role === "Admin" ? "Admin" : "Client";
+
+    if (userRole === "Client") {
+      if (!adminEmail) {
+        return res.status(400).send("Admin email is required for Client registration");
+      }
+      const adminExists = await User.findOne({ email: adminEmail, role: "Admin" });
+      if (!adminExists) {
+        return res.status(400).send("Admin not found with the provided email");
+      }
     }
 
     const existingUser = await User.findOne({ email });
@@ -19,27 +31,23 @@ const register = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const userRole = role === "Admin" ? "Admin" : "Client";
 
-    let assignedSystemId = null;
+    // Auto-generate system credentials for ALL users
+    const assignedSystemId = "sys-" + crypto.randomBytes(4).toString("hex");
+    const systemKey = crypto.randomBytes(16).toString("hex");
 
-    if (userRole === "Client") {
-      // Auto-generate system credentials for Client
-      assignedSystemId = "sys-" + crypto.randomBytes(4).toString("hex");
-      const systemKey = crypto.randomBytes(16).toString("hex");
-
-      const newSystem = new System({
-        systemId: assignedSystemId,
-        systemKey
-      });
-      await newSystem.save();
-    }
+    const newSystem = new System({
+      systemId: assignedSystemId,
+      systemKey
+    });
+    await newSystem.save();
 
     const user = new User({
       email,
       password: hashedPassword,
       role: userRole,
-      systemId: assignedSystemId
+      systemId: assignedSystemId,
+      ...(userRole === "Client" && { adminEmail })
     });
 
     await user.save();

@@ -28,12 +28,12 @@ const registerSystem = async (req, res) => {
 
 const getSystemConfig = async (req, res) => {
   try {
-    const { systemId } = req;
-    if (!systemId) {
-      return res.status(404).send("No system associated with this user");
+    let query = { ...req.systemFilter };
+    if (!Object.keys(query).length || query.systemId === "unauthorized_system_id") {
+       return res.status(404).send("No system associated with this user");
     }
 
-    const system = await System.findOne({ systemId });
+    const system = await System.findOne(query);
     if (!system) {
       return res.status(404).send("System records not found");
     }
@@ -57,7 +57,7 @@ const getSystems = async (req, res) => {
       return res.status(403).send("Forbidden");
     }
 
-    const systems = await System.distinct("systemId");
+    const systems = await System.find(req.systemFilter).distinct("systemId");
     res.json(systems);
   } catch (err) {
     console.error(err);

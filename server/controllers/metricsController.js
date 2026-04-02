@@ -5,17 +5,10 @@ const Telemetry1Hour = require("../models/telemetry1hrModel");
 const getCPU = async (req, res) => {
   try {
 
-    const { last = 30, host, minutes, systemId: querySystemId } = req.query;
-    const { systemId: tokenSystemId, role } = req;
+    const { last = 30, host, minutes } = req.query;
 
     let Model = Telemetry;
-    let query = {};
-
-    if (role === "Admin") {
-      if (querySystemId) query.systemId = querySystemId;
-    } else {
-      query.systemId = tokenSystemId;
-    }
+    let query = { ...req.systemFilter };
 
     if (host) {
       query.host = host;
@@ -51,17 +44,10 @@ const getCPU = async (req, res) => {
 const getMemory = async (req, res) => {
   try {
 
-    const { last = 30, host, minutes, systemId: querySystemId } = req.query;
-    const { systemId: tokenSystemId, role } = req;
+    const { last = 30, host, minutes } = req.query;
 
     let Model = Telemetry;
-    let query = {};
-
-    if (role === "Admin") {
-      if (querySystemId) query.systemId = querySystemId;
-    } else {
-      query.systemId = tokenSystemId;
-    }
+    let query = { ...req.systemFilter };
 
     if (host) {
       query.host = host;
@@ -97,17 +83,7 @@ const getMemory = async (req, res) => {
 const getHostSummary = async (req, res) => {
   try {
 
-    const { systemId: tokenSystemId, role } = req;
-    const { systemId: querySystemId } = req.query;
-
-    let matchQuery = {};
-
-    // RBAC Enforcement
-    if (role === "Admin") {
-      if (querySystemId) matchQuery.systemId = querySystemId;
-    } else {
-      matchQuery.systemId = tokenSystemId;
-    }
+    let matchQuery = { ...req.systemFilter };
 
     const data = await Telemetry.aggregate([
       { $match: matchQuery },

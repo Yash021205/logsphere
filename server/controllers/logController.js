@@ -2,15 +2,9 @@ const Telemetry = require("../models/telemetryModel");
 
 const getLogs = async (req, res) => {
   try {
-    const { systemId: tokenSystemId, role } = req;
-    const { systemId: querySystemId, host } = req.query;
+    const { host } = req.query;
 
-    let query = {};
-    if (role === "Admin") {
-      if (querySystemId) query.systemId = querySystemId;
-    } else {
-      query.systemId = tokenSystemId;
-    }
+    let query = { ...req.systemFilter };
 
     if (host) query.host = host;
 

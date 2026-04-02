@@ -2,15 +2,7 @@ const Telemetry = require("../models/telemetryModel");
 
 const getHosts = async (req, res) => {
   try {
-    const { systemId: tokenSystemId, role } = req;
-    const { systemId: querySystemId } = req.query;
-
-    let query = {};
-    if (role === "Admin") {
-      if (querySystemId) query.systemId = querySystemId;
-    } else {
-      query.systemId = tokenSystemId;
-    }
+    let query = { ...req.systemFilter };
 
     const hosts = await Telemetry.distinct("host", query);
     res.json(hosts);
@@ -25,15 +17,7 @@ const Host = require("../models/hostModel");
 const getHostStatus = async (req, res) => {
   try {
 
-    const { systemId: tokenSystemId, role } = req;
-    const { systemId: querySystemId } = req.query;
-
-    let query = {};
-    if (role === "Admin") {
-      if (querySystemId) query.systemId = querySystemId;
-    } else {
-      query.systemId = tokenSystemId;
-    }
+    let query = { ...req.systemFilter };
 
     const hosts = await Host.find(query);
 

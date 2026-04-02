@@ -1,15 +1,7 @@
 const Telemetry = require("../models/telemetryModel");
 
 exports.getLogStats = async (req, res) => {
-  const { systemId: tokenSystemId, role } = req;
-  const { systemId: querySystemId } = req.query;
-
-  let query = {};
-  if (role === "Admin") {
-    if (querySystemId) query.systemId = querySystemId;
-  } else {
-    query.systemId = tokenSystemId;
-  }
+  let query = { ...req.systemFilter };
 
   const recent = await Telemetry.find(query).sort({ timestamp: -1 }).limit(50);
 

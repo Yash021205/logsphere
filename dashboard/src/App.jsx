@@ -23,6 +23,7 @@ import TimeRangeSelector from "./components/TimeRangeSelector";
 function Dashboard() {
   const [selectedHost, setSelectedHost] = useState("");
   const [selectedSystem, setSelectedSystem] = useState("");
+  const [systemHasHosts, setSystemHasHosts] = useState(true);
   const [range, setRange] = useState(5);
   const [activeTab, setActiveTab] = useState("metrics");
   
@@ -74,34 +75,47 @@ function Dashboard() {
               selectedHost={selectedHost} 
               setSelectedHost={setSelectedHost} 
               systemId={selectedSystem} 
+              onHostsLoaded={setSystemHasHosts}
             />
           </div>
 
-          <AlertBanner systemId={selectedSystem} />
-          <AnomalyBanner systemId={selectedSystem} />
-          <SLABanner systemId={selectedSystem} />
+          {!systemHasHosts ? (
+            <div style={{ marginTop: '50px', textAlign: 'center', padding: '60px 40px', background: 'rgba(30, 41, 59, 0.5)', borderRadius: '12px', border: '1px dashed #475569' }}>
+               <h2 style={{ color: '#cbd5e1', marginBottom: '15px' }}>Agent Not Connected 🔌</h2>
+               <p style={{ color: '#94a3b8', fontSize: '1.1rem', maxWidth: '500px', margin: '0 auto' }}>
+                 We haven't received any telemetry the selected system yet. 
+                 If you are setting this up for the first time, please go to the <b>"Agent Setup"</b> tab to connect your device.
+               </p>
+            </div>
+          ) : (
+            <>
+              <AlertBanner systemId={selectedSystem} />
+              <AnomalyBanner systemId={selectedSystem} />
+              <SLABanner systemId={selectedSystem} />
 
-          <TrendPanel systemId={selectedSystem} />
-          <HistoryPanel systemId={selectedSystem} />
-          <ForecastPanel systemId={selectedSystem} />
+              <TrendPanel systemId={selectedSystem} />
+              <HistoryPanel systemId={selectedSystem} />
+              <ForecastPanel systemId={selectedSystem} />
 
-          <StatusCards host={selectedHost} systemId={selectedSystem} />
-          <HealthCard systemId={selectedSystem} />
+              <StatusCards host={selectedHost} systemId={selectedSystem} />
+              <HealthCard systemId={selectedSystem} />
 
-          <TimeRangeSelector range={range} setRange={setRange} />
+              <TimeRangeSelector range={range} setRange={setRange} />
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "25px", marginTop: "20px" }}>
-            <CpuChart host={selectedHost} range={range} systemId={selectedSystem} />
-            <MemoryChart host={selectedHost} range={range} systemId={selectedSystem} />
-          </div>
-             
-          <div style={{ marginTop: "30px" }}>
-            <LogBreakdown systemId={selectedSystem} />
-            <LogTable host={selectedHost} systemId={selectedSystem} />
-          </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "25px", marginTop: "20px" }}>
+                <CpuChart host={selectedHost} range={range} systemId={selectedSystem} />
+                <MemoryChart host={selectedHost} range={range} systemId={selectedSystem} />
+              </div>
+                 
+              <div style={{ marginTop: "30px" }}>
+                <LogBreakdown systemId={selectedSystem} />
+                <LogTable host={selectedHost} systemId={selectedSystem} />
+              </div>
+            </>
+          )}
         </>
       ) : (
-        <AgentSetup />
+        <AgentSetup selectedSystem={selectedSystem} userRole={userRole} />
       )}
     </div>
   );

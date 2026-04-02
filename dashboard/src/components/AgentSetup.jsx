@@ -2,21 +2,27 @@ import React, { useEffect, useState } from 'react';
 import axios from '../api/axios';
 import '../LandingPage.css';
 
-export default function AgentSetup() {
+export default function AgentSetup({ selectedSystem, userRole }) {
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get('/system/config')
+    let url = '/system/config';
+    if (selectedSystem) {
+      url += `?systemId=${selectedSystem}`;
+    }
+    
+    axios.get(url)
       .then(res => {
         setConfig(res.data);
         setLoading(false);
       })
       .catch(err => {
         console.error("Failed to load config", err);
+        setConfig(null);
         setLoading(false);
       });
-  }, []);
+  }, [selectedSystem]);
 
   const downloadConfig = () => {
     if (!config) return;
@@ -59,6 +65,11 @@ export default function AgentSetup() {
 
           <section>
             <h3 style={{ color: 'white', marginBottom: '10px' }}>2. Get your Configuration</h3>
+            {userRole === "Admin" && !selectedSystem && (
+               <p style={{ color: '#ef4444', marginBottom: '15px', fontWeight: 'bold' }}>
+                 ⚠️ Please switch to the "Live Metrics" tab and select a specific system from the top dropdown, then return here to download its configuration.
+               </p>
+            )}
             <p style={{ color: '#94a3b8', marginBottom: '15px' }}>Click below to download your unique <code>config.json</code>. Place this file in the same folder as the agent binary.</p>
             <button className="btn-primary" onClick={downloadConfig}>
               Download config.json

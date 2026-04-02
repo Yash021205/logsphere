@@ -12,6 +12,12 @@ export default function SystemSelector({ selectedSystem, setSelectedSystem }) {
   }, []);
 
   useEffect(() => {
+    if (systems.length > 0 && !selectedSystem) {
+      setSelectedSystem(systems[0]);
+    }
+  }, [systems, selectedSystem, setSelectedSystem]);
+
+  useEffect(() => {
     if (selectedSystem) {
       socket.emit("join-system", selectedSystem);
     }
@@ -32,7 +38,6 @@ export default function SystemSelector({ selectedSystem, setSelectedSystem }) {
           cursor: "pointer"
         }}
       >
-        <option value="">Global (All Systems)</option>
         {systems.map((sys, i) => (
           <option key={i} value={sys}>{sys}</option>
         ))}

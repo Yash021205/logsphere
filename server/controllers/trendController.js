@@ -2,15 +2,7 @@ const Telemetry = require("../models/telemetryModel");
 
 exports.getTrends = async (req, res) => {
   try {
-    const { systemId: tokenSystemId, role } = req;
-    const { systemId: querySystemId } = req.query;
-
-    let query = {};
-    if (role === "Admin") {
-      if (querySystemId) query.systemId = querySystemId;
-    } else {
-      query.systemId = tokenSystemId;
-    }
+    let query = { ...req.systemFilter };
 
     const data = await Telemetry.find(query)
       .sort({ timestamp: -1 })
