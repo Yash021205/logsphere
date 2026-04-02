@@ -16,7 +16,9 @@ const { aggregate5Min, aggregate1Hour } = require("./jobs/aggregationJob");
 setInterval(aggregate5Min, 5 * 60 * 1000); // every 5 min
 setInterval(aggregate1Hour, 60 * 60 * 1000); // every hour
 const app = express();
-app.use(cors());
+
+const allowedOrigins = process.env.CORS_ORIGIN || "*";
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 app.use("/", anomalyRoutes);
 app.use("/", systemRoutes);
@@ -36,7 +38,7 @@ app.use("/", logRoutes);
 app.use("/", hostRoutes);
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "*" }
+  cors: { origin: allowedOrigins, credentials: true }
 });
 
 const jwt = require("jsonwebtoken");
@@ -68,7 +70,8 @@ io.on("connection", (socket) => {
 
 app.set("io", io);
 
-server.listen(5000, () => {
-  console.log("LogSphere server running on port 5000");
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
+  console.log(`LogSphere server running on port ${PORT}`);
 });
 

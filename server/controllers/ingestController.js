@@ -11,32 +11,33 @@ const ingestTelemetry = async (req, res) => {
     if (!data.systemId) {
       return res.status(400).send("systemId missing");
     }
+    
     // Verify system authentication
     const system = await System.findOne({
       systemId: data.systemId,
       systemKey: data.systemKey
     });
 
-    // Host auto-registration
-await Host.findOneAndUpdate(
-  { systemId: data.systemId, host: data.host },
-  {
-    $set: { lastSeen: data.timestamp },
-    $setOnInsert: { firstSeen: data.timestamp }
-  },
-  { upsert: true }
-);
-
-io.to(data.systemId).emit("host-status", {
-  systemId: data.systemId,
-  host: data.host,
-  lastSeen: data.timestamp,
-  status: "ONLINE"
-});
-
     if (!system) {
       return res.status(401).send("Invalid system credentials");
     }
+
+    // Host auto-registration
+    await Host.findOneAndUpdate(
+      { systemId: data.systemId, host: data.host },
+      {
+        $set: { lastSeen: data.timestamp },
+        $setOnInsert: { firstSeen: data.timestamp }
+      },
+      { upsert: true }
+    );
+
+    io.to(data.systemId).emit("host-status", {
+      systemId: data.systemId,
+      host: data.host,
+      lastSeen: data.timestamp,
+      status: "ONLINE"
+    });
 
     //  1. Classify logs
 

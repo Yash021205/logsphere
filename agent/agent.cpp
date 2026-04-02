@@ -21,6 +21,7 @@
     #include <dirent.h>
 #endif
 
+#include "httplib.h"
 #include "json.hpp"
 using json = nlohmann::json;
 
@@ -252,6 +253,25 @@ int main() {
         return 1; // Exit immediately if credentials are missing
     }
 
+    std::string ingestUrl = "http://localhost:5000";
+    if (getenv("LOGSPHERE_URL")) {
+        ingestUrl = getenv("LOGSPHERE_URL");
+    }
+    
+    httplib::Client cli(ingestUrl.c_str());
+    cli.set_connection_timeout(5, 0);
+    cli.set_read_timeout(5, 0); 
+    cli.set_write_timeout(5, 0);
+
+    std::string logFilePath = "app.log";
+#ifndef _WIN32
+    logFilePath = "/var/log/syslog";
+#endif
+
+    if (getenv("LOG_FILE_PATH")) {
+        logFilePath = getenv("LOG_FILE_PATH");
+    }
+
     while (true) {
         heartbeat++;
 
@@ -259,7 +279,7 @@ int main() {
         double mem = getMemoryUsage();
         int processes = getProcessCount();
 
-        auto newLogs = readNewLogs("app.log", lastPos);
+        auto newLogs = readNewLogs(logFilePath, lastPos);
         auto aggregated = aggregateLogs(newLogs, logStore);
 
         std::cout << "CPU: " << cpu
@@ -280,7 +300,18 @@ int main() {
 
         if (heartbeat % 2 == 0 || !aggregated.empty()) {
             std::string data = payload.dump();
-            std::cout << "Sending: " << data << "\n";
+            std::cout << "Aggregating Telemetry to " << ingestUrl << "/ingest ...\n";
+            auto res = cli.Post("/ingest", data, "application/json");
+            if (res) {
+                if (res->status == 200) {
+                    std::cout << "Successfully delivered to SaaS Backend!\n";
+                } else {
+                    std::cerr << "Failed to deliver (Status: " << res->status << "): " << res->body << "\n";
+                }
+            } else {
+                auto err = res.error();
+                std::cerr << "HTTP POST Error: " << httplib::to_string(err) << "\n";
+            }
         }
 
         if (!aggregated.empty())
