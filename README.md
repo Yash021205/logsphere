@@ -89,22 +89,30 @@ npm run dev
 > **Note**: Access the dashboard locally at `http://localhost:5173`. Upon your first visit, you will need to register an admin account to log in.
 
 ### 3. Agent Integration
-To connect an actual machine to your dashboard:
+To connect an actual machine to your dashboard, you can deploy the native C++ agent over your network without compiling code on the target machine.
 
-**Option A: Automated Windows Install**
 1. Generate a `systemId` and `systemKey` from inside your Dashboard UI.
-2. Open PowerShell as an Administrator and execute the installation script:
-```powershell
-cd agent
-.\install.ps1 -systemId "MyFirstServer" -systemKey "your-system-key-here"
-```
-3. A `LogSphere` configuration folder will be created in your Program Files. Run `logsphere-agent.exe`.
+2. Follow the deployment path for your target operating system:
 
-**Option B: Simulation Testing (The Easy Route)**
-If you wish to view live data to test out alerts, prediction paths, and chart fluidity without setting up a C++ agent:
-1. Navigate to your `test without agent` folder containing your Mock Agents.
-2. Run `node mockagent.js`. 
-3. Data will bypass the actual OS layer, simulate random load thresholds, and populate your dashboard instantly!
+**Over-The-Air (OTA) Linux Install**
+Open a terminal on your Linux target machine and execute the bash installer:
+```bash
+curl -sL "http://localhost:5000/install.sh" | bash -s -- --systemId "MyLinuxBox" --systemKey "your-system-key-here" --ingestUrl "http://localhost:5000"
+```
+*The installer automatically downloads the native Linux binary and registers a secure `systemd` background service.*
+
+**Over-The-Air (OTA) Windows Install**
+Open a standard PowerShell window on your Windows target machine and execute the deployment script. *(This script places files into your local AppData, bypassing Administrator restrictions!)*
+```powershell
+Invoke-WebRequest -Uri "http://localhost:5000/install.ps1" -OutFile install.ps1; .\install.ps1 -systemId "MyWindowsBox" -systemKey "your-system-key-here" -ingestUrl "http://localhost:5000"
+```
+Launch the downloaded agent directly via:
+```powershell
+%LOCALAPPDATA%\LogSphere\logsphere-agent.exe
+```
+
+**Custom Log Tailing (Bonus)**
+Want to see live application logs inside your dashboard? The agent defaults to scanning for an `app.log` file in its current working directory (e.g. `%LOCALAPPDATA%\LogSphere\app.log` or `/var/log/syslog`). Merely pipe any application errors to that file and the C++ Agent will intercept and stream them into your Dashboard's Live Log Console instantly!
 
 ---
 

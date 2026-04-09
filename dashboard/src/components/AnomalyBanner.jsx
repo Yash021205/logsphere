@@ -5,7 +5,7 @@ function AnomalyBanner({ systemId }) {
   const [alerts, setAlerts] = useState([]);
 
   useEffect(() => {
-    socket.on("anomaly", (data) => {
+    const handleAnomaly = (data) => {
       // Filter anomaly alerts by systemId if provided
       const filtered = systemId 
         ? data.filter(a => a.systemId === systemId)
@@ -15,9 +15,10 @@ function AnomalyBanner({ systemId }) {
         setAlerts(filtered);
         setTimeout(() => setAlerts([]), 7000);
       }
-    });
+    };
 
-    return () => socket.off("anomaly");
+    socket.on("anomaly", handleAnomaly);
+    return () => socket.off("anomaly", handleAnomaly);
   }, [systemId]);
 
   if (alerts.length === 0) return null;

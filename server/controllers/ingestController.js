@@ -1,4 +1,5 @@
 const Telemetry = require("../models/telemetryModel");
+const Telemetry5Min = require("../models/telemetry5minModel");
 const System = require("../models/systemModel");
 const Host = require("../models/hostModel");
 const { checkAlerts } = require("../services/alertService");
@@ -50,21 +51,19 @@ const ingestTelemetry = async (req, res) => {
     //  2. Generate dynamic threshold alerts
     const alerts = await checkAlerts(data);
 
-    //  3. Baseline calculation (last 5 minutes)
-    const fiveMinutesAgo = new Date(Date.now() - 300 * 1000);
-
-    const recentData = await Telemetry.find({
+    //  3. Baseline calculation
+    // Instead of querying heavy raw logs, we fetch the most recent aggregated 5-min baseline
+    const latestBaseline = await Telemetry5Min.findOne({
       systemId: data.systemId,
-      host: data.host,
-      timestamp: { $gte: fiveMinutesAgo }
-    });
+      host: data.host
+    }).sort({ timestamp: -1 });
 
     let avgCPU = 0;
     let avgMem = 0;
 
-    if (recentData.length > 0) {
-      avgCPU = recentData.reduce((sum, d) => sum + d.cpu, 0) / recentData.length;
-      avgMem = recentData.reduce((sum, d) => sum + d.memory, 0) / recentData.length;
+    if (latestBaseline) {
+      avgCPU = latestBaseline.cpu;
+      avgMem = latestBaseline.memory;
     }
 
     //  4. Anomaly detection

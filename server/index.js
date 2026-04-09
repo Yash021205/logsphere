@@ -20,6 +20,8 @@ const app = express();
 const allowedOrigins = process.env.CORS_ORIGIN || "*";
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
+// Serve static OTA deployment binaries & installation scripts
+app.use(express.static("public"));
 app.use("/", anomalyRoutes);
 app.use("/", systemRoutes);
 app.use("/", authRoutes);
@@ -60,8 +62,11 @@ io.on("connection", (socket) => {
 
   socket.on("join-system", (systemId) => {
     if (socket.user && socket.user.role === "Admin") {
-      // Leave previous system rooms if any (optional, but cleaner)
-      // For now, just join the new one
+      // Ensure the Admin user actually belongs to this systemId to prevent cross-tenant data leaks
+      if (socket.user.systemId !== systemId) {
+        console.warn(`Security Warning: User ${socket.user.email} attempted to join unauthorized system ${systemId}`);
+        return;
+      }
       socket.join(systemId);
       console.log(`Admin joined system room: ${systemId}`);
     }

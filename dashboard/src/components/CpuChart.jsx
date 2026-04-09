@@ -20,7 +20,7 @@ function CpuChart({ host, range, systemId }) {
   }, [range, host, systemId]);
 
   useEffect(() => {
-    socket.on("telemetry", (msg) => {
+    const handleTelemetry = (msg) => {
       if (host && msg.host !== host) return;
       if (systemId && msg.systemId !== systemId) return;
 
@@ -31,9 +31,10 @@ function CpuChart({ host, range, systemId }) {
           value: msg.cpu
         }
       ]);
-    });
+    };
 
-    return () => socket.off("telemetry");
+    socket.on("telemetry", handleTelemetry);
+    return () => socket.off("telemetry", handleTelemetry);
   }, [host, systemId]);
 
   return (

@@ -16,7 +16,7 @@ function LogTable({ host, systemId }) {
 
   // Real-time updates
   useEffect(() => {
-    socket.on("telemetry", (msg) => {
+    const handleTelemetry = (msg) => {
       if (host && msg.host !== host) return;
       if (systemId && msg.systemId !== systemId) return;
 
@@ -30,9 +30,10 @@ function LogTable({ host, systemId }) {
 
         setLogs(prev => [...newLogs, ...prev].slice(0, 50));
       }
-    });
+    };
 
-    return () => socket.off("telemetry");
+    socket.on("telemetry", handleTelemetry);
+    return () => socket.off("telemetry", handleTelemetry);
   }, [host, systemId]);
 
   const getSeverityColor = (msg) => {
