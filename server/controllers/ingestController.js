@@ -23,12 +23,18 @@ const ingestTelemetry = async (req, res) => {
       return res.status(401).send("Invalid system credentials");
     }
 
+    // Normalize timestamp to milliseconds (Unix timestamps in seconds are <= 10 digits)
+    let timestamp = data.timestamp || Date.now();
+    if (timestamp < 100000000000) {
+      timestamp = timestamp * 1000;
+    }
+
     // Host auto-registration
     await Host.findOneAndUpdate(
       { systemId: data.systemId, host: data.host },
       {
-        $set: { lastSeen: data.timestamp },
-        $setOnInsert: { firstSeen: data.timestamp }
+        $set: { lastSeen: timestamp },
+        $setOnInsert: { firstSeen: timestamp }
       },
       { upsert: true }
     );
@@ -36,7 +42,7 @@ const ingestTelemetry = async (req, res) => {
     io.to(data.systemId).emit("host-status", {
       systemId: data.systemId,
       host: data.host,
-      lastSeen: data.timestamp,
+      lastSeen: timestamp,
       status: "ONLINE"
     });
 
@@ -90,7 +96,7 @@ const ingestTelemetry = async (req, res) => {
       cpu: data.cpu,
       memory: data.memory,
       processes: data.processes,
-      timestamp: data.timestamp,
+      timestamp: timestamp,
       logs: processedLogs,
       alerts
     });
@@ -103,7 +109,7 @@ const ingestTelemetry = async (req, res) => {
       cpu: data.cpu,
       memory: data.memory,
       logs: processedLogs,
-      timestamp: data.timestamp
+      timestamp: timestamp
     });
 
     //  7. Emit anomalies if found
