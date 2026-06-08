@@ -1,42 +1,35 @@
 #!/bin/bash
 set -e
 
-# Default to production if not set
 INGEST_URL="https://api.logsphere.com"
-SYSTEM_ID=""
-SYSTEM_KEY=""
 
-# Parse arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
-        --systemId) SYSTEM_ID="$2"; shift ;;
-        --systemKey) SYSTEM_KEY="$2"; shift ;;
-        --ingestUrl) INGEST_URL="$2"; shift ;;
-        *) echo "Unknown parameter passed: $1"; exit 1 ;;
+        --ingestUrl) INGEST_URL="$2"; shift 2 ;;
+        *) echo "Unknown parameter: $1"; exit 1 ;;
     esac
-    shift
 done
 
-if [ -z "$SYSTEM_ID" ] || [ -z "$SYSTEM_KEY" ]; then
-    echo "Error: --systemId and --systemKey are required."
-    exit 1
-fi
+echo "Installing LogSphere Agent..."
 
-echo "Installing LogSphere Agent for System: $SYSTEM_ID..."
+INSTALL_DIR="/etc/logsphere"
+AGENT_BIN="/usr/local/bin/logsphere-agent"
 
-INSTALL_DIR="/usr/local/bin"
-AGENT_BIN="$INSTALL_DIR/logsphere-agent"
+mkdir -p $INSTALL_DIR
 
-# Download the native binary from the hosted location
-echo "Downloading native binary..."
+# Download binary
 curl -sLo $AGENT_BIN "$INGEST_URL/binaries/logsphere-agent-linux"
 chmod +x $AGENT_BIN
 
-# Create systemd service
-SERVICE_FILE="/etc/systemd/system/logsphere-agent.service"
-echo "Registering background service at $SERVICE_FILE"
+# Write minimal config — no credentials
+cat <<EOF > $INSTALL_DIR/config.json
+{
+  "ingestUrl": "$INGEST_URL"
+}
+EOF
 
-cat <<EOF > $SERVICE_FILE
+# Systemd service — no credential env vars needed anymore
+cat <<EOF > /etc/systemd/system/logsphere-agent.service
 [Unit]
 Description=LogSphere Telemetry Agent
 After=network.target
@@ -44,11 +37,9 @@ After=network.target
 [Service]
 Type=simple
 ExecStart=$AGENT_BIN
-Environment="SYSTEM_ID=$SYSTEM_ID"
-Environment="SYSTEM_KEY=$SYSTEM_KEY"
-Environment="LOGSPHERE_URL=$INGEST_URL"
+WorkingDirectory=$INSTALL_DIR
 Restart=always
-RestartSec=5
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
@@ -58,4 +49,6 @@ systemctl daemon-reload
 systemctl enable logsphere-agent.service
 systemctl start logsphere-agent.service
 
-echo "LogSphere Agent installed and started successfully!"
+echo ""
+echo "Agent installed and running!"
+echo "Log into your LogSphere dashboard and click [Claim Device] to begin monitoring."
