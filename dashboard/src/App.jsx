@@ -19,6 +19,7 @@ import HealthCard from "./components/HealthCard";
 import LogBreakdown from "./components/LogBreakdown";
 import SLABanner from "./components/SLABanner";
 import TimeRangeSelector from "./components/TimeRangeSelector";
+import PendingDevices from "./components/PendingDevices";
 
 function Dashboard() {
   const [selectedHost, setSelectedHost] = useState("");
@@ -115,7 +116,10 @@ function Dashboard() {
           )}
         </>
       ) : (
-        <AgentSetup selectedSystem={selectedSystem} userRole={userRole} />
+        <>
+          <PendingDevices />
+          <AgentSetup selectedSystem={selectedSystem} userRole={userRole} />
+        </>
       )}
     </div>
   );
