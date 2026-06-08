@@ -13,6 +13,7 @@ const anomalyRoutes = require("./routes/anomalyroutes");
 const systemRoutes = require("./routes/systemRoutes");
 const authRoutes = require("./routes/authRoutes");
 const { aggregate5Min, aggregate1Hour } = require("./jobs/aggregationJob");
+const deviceRoutes = require("./routes/devices");
 setInterval(aggregate5Min, 5 * 60 * 1000); // every 5 min
 setInterval(aggregate1Hour, 60 * 60 * 1000); // every hour
 const app = express();
@@ -27,6 +28,7 @@ app.use("/", systemRoutes);
 app.use("/", authRoutes);
 connectDB();
 app.use("/trends", require("./routes/trendRoutes"));
+app.use("/api/devices", deviceRoutes);
 app.use("/history", require("./routes/historyRoutes"));
 app.use("/predict", require("./routes/predictRoutes"));
 app.use("/alert-rules", require("./routes/alertRuleRoutes"));

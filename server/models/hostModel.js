@@ -13,6 +13,12 @@ const HostSchema = new mongoose.Schema({
     required: true
   },
 
+  deviceId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Device",
+    default: null
+  },
+
   firstSeen: {
     type: Number
   },
