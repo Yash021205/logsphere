@@ -4,6 +4,7 @@ const express = require("express");
 const router = express.Router();
 const Device = require("../models/device");
 const User = require("../models/userModel");
+const System = require("../models/systemModel");
 const authMiddleware = require("../middleware/authMiddleware");
 
 
@@ -166,6 +167,11 @@ router.post("/claim/:deviceId", authMiddleware, async (req, res) => {
 
         await device.save();
 
+        await System.create({
+            systemId: device.systemId,
+            systemKey: device.systemKey
+        });
+        
         // ── CRITICAL: update the User's systemId ──────────────────────
         // Your existing auth flow puts systemId in the JWT and uses it
         // for all metric queries. We must update the User record so the
