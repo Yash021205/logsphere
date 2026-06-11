@@ -20,6 +20,8 @@ const app = express();
 
 const allowedOrigins = process.env.CORS_ORIGIN || "*";
 app.use(cors({ origin: allowedOrigins, credentials: true }));
+const { checkDeviceStatus } = require("./jobs/deviceStatusJob");
+setInterval(checkDeviceStatus, 60 * 1000); // every minute
 app.use(express.json());
 // Serve static OTA deployment binaries & installation scripts
 app.use(express.static("public"));

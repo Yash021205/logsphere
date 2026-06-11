@@ -28,7 +28,7 @@ using json = nlohmann::json;
 // ── Install directory — credentials live here permanently ────────
 #ifdef _WIN32
     // C:\ProgramData\LogSphere\config.json
-    const std::string INSTALL_DIR  = std::string(getenv("LOCALAPPDATA") ? getenv("LOCALAPPDATA") : ".") + "\\LogSphere";
+    const std::string INSTALL_DIR  = std::string(getenv("PROGRAMFILES") ? getenv("PROGRAMFILES") : "C:\\Program Files") + "\\LogSphere";
     const std::string CONFIG_PATH  = INSTALL_DIR + "\\config.json";
 #else
     const std::string INSTALL_DIR  = "/etc/logsphere";

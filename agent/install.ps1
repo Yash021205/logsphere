@@ -2,7 +2,7 @@ param (
     [string]$ingestUrl = "https://api.logsphere.com"
 )
 
-$InstallDir = "$env:LOCALAPPDATA\LogSphere"
+$InstallDir = "$env:ProgramFiles\LogSphere"
 $AgentExe   = "$InstallDir\logsphere-agent.exe"
 $ConfigFile = "$InstallDir\config.json"
 

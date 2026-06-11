@@ -4,7 +4,7 @@ const System = require("../models/systemModel");
 const Host = require("../models/hostModel");
 const { checkAlerts } = require("../services/alertService");
 const { classifyLog } = require("../services/logClassifier");
-
+const Device = require("../models/device");
 const ingestTelemetry = async (req, res) => {
   try {
     const data = req.body;
@@ -22,7 +22,13 @@ const ingestTelemetry = async (req, res) => {
     if (!system) {
       return res.status(401).send("Invalid system credentials");
     }
-
+    
+    // Mark device as active and update lastSeen on every ingest
+    await Device.findOneAndUpdate(
+      { systemId: data.systemId },
+      { $set: { status: "active", lastSeen: new Date() } }
+    );
+    
     // Normalize timestamp to milliseconds (Unix timestamps in seconds are <= 10 digits)
     let timestamp = data.timestamp || Date.now();
     if (timestamp < 100000000000) {

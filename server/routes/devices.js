@@ -192,5 +192,36 @@ router.post("/claim/:deviceId", authMiddleware, async (req, res) => {
     }
 });
 
+// ════════════════════════════════════════════════════════════════
+// ENDPOINT 5 — User Status is displayed on Dashboard
+// ════════════════════════════════════════════════════════════════
+
+router.get("/all", authMiddleware, async (req, res) => {
+  try {
+    let query = {};
+
+    if (req.role === "Admin") {
+      query = {
+        status: { $in: ["active", "offline", "claimed"] },
+        ownerAdminEmail: req.email
+      };
+    } else {
+      query = {
+        status: { $in: ["active", "offline", "claimed"] },
+        ownerEmail: req.email
+      };
+    }
+
+    const devices = await Device.find(query)
+      .select("_id hostname platform status lastSeen agentVersion")
+      .sort({ lastSeen: -1 });
+
+    return res.json({ devices });
+
+  } catch (err) {
+    console.error("All devices error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 module.exports = router;

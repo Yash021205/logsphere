@@ -20,6 +20,7 @@ import LogBreakdown from "./components/LogBreakdown";
 import SLABanner from "./components/SLABanner";
 import TimeRangeSelector from "./components/TimeRangeSelector";
 import PendingDevices from "./components/PendingDevices";
+import DeviceStatus from "./components/DeviceStatus";
 
 function Dashboard() {
   const [selectedHost, setSelectedHost] = useState("");
@@ -79,7 +80,7 @@ function Dashboard() {
               onHostsLoaded={setSystemHasHosts}
             />
           </div>
-
+          <DeviceStatus />
           {!systemHasHosts ? (
             <div style={{ marginTop: '50px', textAlign: 'center', padding: '60px 40px', background: 'rgba(30, 41, 59, 0.5)', borderRadius: '12px', border: '1px dashed #475569' }}>
                <h2 style={{ color: '#cbd5e1', marginBottom: '15px' }}>Agent Not Connected 🔌</h2>
