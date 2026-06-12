@@ -29,22 +29,28 @@ export default function usePendingDevices() {
     return () => clearInterval(interval); // cleanup on unmount
   }, [fetchPending]);
 
-  // Called when user clicks [Claim] on a device card
   const claimDevice = useCallback(async (deviceId) => {
-    try {
-      setClaiming(deviceId);
-      const token = localStorage.getItem("token");
-      await axios.post(`/api/devices/claim/${deviceId}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      // Remove claimed device from list immediately (optimistic update)
-      setDevices(prev => prev.filter(d => d._id !== deviceId));
-    } catch (err) {
-      alert(err.response?.data?.error || "Failed to claim device");
-    } finally {
-      setClaiming(null);
-    }
-  }, []);
+  try {
+    setClaiming(deviceId);
+    const token = localStorage.getItem("token");
+    await axios.post(`/api/devices/claim/${deviceId}`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    // Remove claimed device from list immediately
+    setDevices(prev => prev.filter(d => d._id !== deviceId));
+    // ── Force fresh JWT so new systemId takes effect ──────────
+    // Reload the page — simplest and most reliable approach
+    // JWT will be re-issued on next login, so redirect to auth
+    alert("Device claimed! Please log in again to activate monitoring.");
+    localStorage.removeItem("token");
+    window.location.href = "/auth";
+
+  } catch (err) {
+    alert(err.response?.data?.error || "Failed to claim device");
+  } finally {
+    setClaiming(null);
+  }
+}, []);
 
   return { devices, loading, error, claimDevice, claiming };
 }
