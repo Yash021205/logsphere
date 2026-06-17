@@ -11,8 +11,8 @@ function timeAgo(dateStr) {
   return `${Math.floor(diff / 3600)}h ago`;
 }
 
-export default function PendingDevices() {
-  const { devices, loading, error, claimDevice, claiming } = usePendingDevices();
+export default function PendingDevices({ showToast }) {
+  const { devices, loading, error, claimDevice, claiming } = usePendingDevices({ showToast });
 
   // Don't render anything if no pending devices and not loading
   // — keeps the setup tab clean when everything is claimed

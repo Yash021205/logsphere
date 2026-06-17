@@ -21,14 +21,19 @@ import SLABanner from "./components/SLABanner";
 import TimeRangeSelector from "./components/TimeRangeSelector";
 import PendingDevices from "./components/PendingDevices";
 import DeviceStatus from "./components/DeviceStatus";
+import AlertRulesPanel from "./components/AlertRulesPanel";
+import ToastContainer from "./components/Toast";
+import useToast from "./hooks/useToast";
 
 function Dashboard() {
-  const [selectedHost, setSelectedHost] = useState("");
+  const [selectedHost,   setSelectedHost]   = useState("");
   const [selectedSystem, setSelectedSystem] = useState("");
   const [systemHasHosts, setSystemHasHosts] = useState(true);
-  const [range, setRange] = useState(5);
-  const [activeTab, setActiveTab] = useState("metrics");
-  
+  const [range,          setRange]          = useState(5);
+  const [activeTab,      setActiveTab]      = useState("metrics");
+
+  const { toasts, showToast, dismissToast } = useToast();
+
   const token = localStorage.getItem("token");
   if (!token) return <Navigate to="/auth" />;
 
@@ -38,77 +43,87 @@ function Dashboard() {
     userRole = decoded.role;
   } catch (e) {}
 
+  const tabStyle = (tab) => ({
+    cursor: "pointer",
+    color: activeTab === tab ? "#6366f1" : "#64748b",
+    fontWeight: activeTab === tab ? "600" : "400",
+    borderBottom: activeTab === tab ? "2px solid #6366f1" : "none",
+    paddingBottom: "3px"
+  });
+
   return (
     <div style={{ padding: "30px 40px", color: "white" }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <div>
-          <h1 style={{ marginBottom: '5px' }}>LogSphere Dashboard</h1>
-          <div style={{ display: 'flex', gap: '20px' }}>
-            <span 
-              onClick={() => setActiveTab("metrics")}
-              style={{ cursor: 'pointer', color: activeTab === 'metrics' ? '#6366f1' : '#64748b', fontWeight: activeTab === 'metrics' ? '600' : '400', borderBottom: activeTab === 'metrics' ? '2px solid #6366f1' : 'none', paddingBottom: '3px' }}
-            >
+          <h1 style={{ marginBottom: "5px" }}>LogSphere Dashboard</h1>
+          <div style={{ display: "flex", gap: "20px" }}>
+            <span onClick={() => setActiveTab("metrics")} style={tabStyle("metrics")}>
               Live Metrics
             </span>
-            <span 
-              onClick={() => setActiveTab("setup")}
-              style={{ cursor: 'pointer', color: activeTab === 'setup' ? '#6366f1' : '#64748b', fontWeight: activeTab === 'setup' ? '600' : '400', borderBottom: activeTab === 'setup' ? '2px solid #6366f1' : 'none', paddingBottom: '3px' }}
-            >
+            <span onClick={() => setActiveTab("setup")} style={tabStyle("setup")}>
               Agent Setup
+            </span>
+            <span onClick={() => setActiveTab("alerts")} style={tabStyle("alerts")}>
+              Alert Rules
             </span>
           </div>
         </div>
-        <button 
+        <button
           onClick={() => { localStorage.removeItem("token"); window.location.href = "/"; }}
-          className="btn-secondary" 
-          style={{ padding: '8px 20px', fontSize: '0.9rem' }}
+          className="btn-secondary"
+          style={{ padding: "8px 20px", fontSize: "0.9rem" }}
         >
           Logout
         </button>
       </div>
 
-      {activeTab === 'metrics' ? (
+      {/* ── Live Metrics tab ──────────────────────────────────────── */}
+      {activeTab === "metrics" && (
         <>
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+          <div style={{ display: "flex", gap: "20px", alignItems: "flex-start" }}>
             {userRole === "Admin" && (
               <SystemSelector selectedSystem={selectedSystem} setSelectedSystem={setSelectedSystem} />
             )}
-            <HostSelector 
-              selectedHost={selectedHost} 
-              setSelectedHost={setSelectedHost} 
-              systemId={selectedSystem} 
+            <HostSelector
+              selectedHost={selectedHost}
+              setSelectedHost={setSelectedHost}
+              systemId={selectedSystem}
               onHostsLoaded={setSystemHasHosts}
             />
           </div>
+
           <DeviceStatus />
+
           {!systemHasHosts ? (
-            <div style={{ marginTop: '50px', textAlign: 'center', padding: '60px 40px', background: 'rgba(30, 41, 59, 0.5)', borderRadius: '12px', border: '1px dashed #475569' }}>
-               <h2 style={{ color: '#cbd5e1', marginBottom: '15px' }}>Agent Not Connected 🔌</h2>
-               <p style={{ color: '#94a3b8', fontSize: '1.1rem', maxWidth: '500px', margin: '0 auto' }}>
-                 We haven't received any telemetry the selected system yet. 
-                 If you are setting this up for the first time, please go to the <b>"Agent Setup"</b> tab to connect your device.
-               </p>
+            <div style={{ marginTop: "50px", textAlign: "center", padding: "60px 40px", background: "rgba(30,41,59,0.5)", borderRadius: "12px", border: "1px dashed #475569" }}>
+              <h2 style={{ color: "#cbd5e1", marginBottom: "15px" }}>Agent Not Connected 🔌</h2>
+              <p style={{ color: "#94a3b8", fontSize: "1.1rem", maxWidth: "500px", margin: "0 auto" }}>
+                We haven't received any telemetry for the selected system yet.
+                If you are setting this up for the first time, go to the <b>"Agent Setup"</b> tab to connect your device.
+              </p>
             </div>
           ) : (
             <>
-              <AlertBanner systemId={selectedSystem} />
+              <AlertBanner   systemId={selectedSystem} />
               <AnomalyBanner systemId={selectedSystem} />
-              <SLABanner systemId={selectedSystem} />
+              <SLABanner     systemId={selectedSystem} />
 
-              <TrendPanel systemId={selectedSystem} />
+              <TrendPanel   systemId={selectedSystem} />
               <HistoryPanel systemId={selectedSystem} />
               <ForecastPanel systemId={selectedSystem} />
 
               <StatusCards host={selectedHost} systemId={selectedSystem} />
-              <HealthCard systemId={selectedSystem} />
+              <HealthCard  systemId={selectedSystem} />
 
               <TimeRangeSelector range={range} setRange={setRange} />
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "25px", marginTop: "20px" }}>
-                <CpuChart host={selectedHost} range={range} systemId={selectedSystem} />
+                <CpuChart    host={selectedHost} range={range} systemId={selectedSystem} />
                 <MemoryChart host={selectedHost} range={range} systemId={selectedSystem} />
               </div>
-                 
+
               <div style={{ marginTop: "30px" }}>
                 <LogBreakdown systemId={selectedSystem} />
                 <LogTable host={selectedHost} systemId={selectedSystem} />
@@ -116,12 +131,28 @@ function Dashboard() {
             </>
           )}
         </>
-      ) : (
+      )}
+
+      {/* ── Agent Setup tab ───────────────────────────────────────── */}
+      {activeTab === "setup" && (
         <>
-          <PendingDevices />
+          <PendingDevices showToast={showToast} />
           <AgentSetup selectedSystem={selectedSystem} userRole={userRole} />
         </>
       )}
+
+      {/* ── Alert Rules tab ───────────────────────────────────────── */}
+      {activeTab === "alerts" && (
+        <>
+          <p style={{ color: "#94a3b8", marginBottom: "8px", fontSize: "0.95rem" }}>
+            Configure when the dashboard fires CPU and memory alerts for your system.
+          </p>
+          <AlertRulesPanel systemId={selectedSystem} />
+        </>
+      )}
+
+      {/* Toast notifications — always rendered at fixed position */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
@@ -130,8 +161,8 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/"          element={<LandingPage />} />
+        <Route path="/auth"      element={<AuthPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </Router>
@@ -139,10 +170,3 @@ function App() {
 }
 
 export default App;
-
-
-
-
-
-
-

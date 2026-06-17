@@ -2,8 +2,7 @@ const Telemetry = require("../models/telemetryModel");
 
 exports.getPrediction = async (req, res) => {
   try {
-    const systemId = req.systemId;
-    const data = await Telemetry.find({ systemId })
+    const data = await Telemetry.find({ ...req.systemFilter })
       .sort({ timestamp: -1 })
       .limit(10);
 

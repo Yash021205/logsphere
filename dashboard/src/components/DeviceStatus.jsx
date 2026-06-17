@@ -79,33 +79,20 @@ export default function DeviceStatus() {
             </div>
 
             {/* Right — status badge */}
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "5px 12px",
-              borderRadius: "999px",
-              background: device.status === "active"
-                ? "rgba(34,197,94,0.1)"
-                : "rgba(239,68,68,0.1)",
-              border: `1px solid ${device.status === "active" ? "#16a34a" : "#dc2626"}`
-            }}>
-              <span style={{
-                width: "7px",
-                height: "7px",
-                borderRadius: "50%",
-                background: device.status === "active" ? "#22c55e" : "#ef4444",
-                display: "inline-block",
-                animation: device.status === "active" ? "pulse 2s infinite" : "none"
-              }} />
-              <span style={{
-                color: device.status === "active" ? "#22c55e" : "#ef4444",
-                fontSize: "0.82rem",
-                fontWeight: "600"
-              }}>
-                {device.status === "active" ? "Online" : "Offline"}
-              </span>
-            </div>
+            {(() => {
+              const isActive  = device.status === "active";
+              const isClaimed = device.status === "claimed";
+              const color  = isActive ? "#22c55e" : isClaimed ? "#f59e0b" : "#ef4444";
+              const bg     = isActive ? "rgba(34,197,94,0.1)" : isClaimed ? "rgba(245,158,11,0.1)" : "rgba(239,68,68,0.1)";
+              const border = isActive ? "#16a34a" : isClaimed ? "#d97706" : "#dc2626";
+              const label  = isActive ? "Online" : isClaimed ? "Provisioning…" : "Offline";
+              return (
+                <div style={{ display:"flex", alignItems:"center", gap:"6px", padding:"5px 12px", borderRadius:"999px", background: bg, border:`1px solid ${border}` }}>
+                  <span style={{ width:"7px", height:"7px", borderRadius:"50%", background: color, display:"inline-block", animation: isActive ? "pulse 2s infinite" : "none" }} />
+                  <span style={{ color, fontSize:"0.82rem", fontWeight:"600" }}>{label}</span>
+                </div>
+              );
+            })()}
 
           </div>
         ))}

@@ -95,23 +95,17 @@ const downloadWindowsAgent = (req, res) => {
   }
 };
 
+// Returns the correct one-liner install command for the current server URL.
+// The new agent provisions itself — no credentials in the command.
 const getInstallCommand = async (req, res) => {
   try {
-    const { systemId } = req.query;
-    if (!systemId) {
-      return res.status(400).send("systemId query param required");
-    }
-
-    const system = await System.findOne({ systemId });
-    if (!system) {
-      return res.status(404).send("System not found");
-    }
-
     const protocol = req.headers['x-forwarded-proto'] || req.protocol;
     const baseUrl = `${protocol}://${req.headers.host}`;
-    const command = `curl -sL ${baseUrl}/install.sh | sudo bash -s -- --systemId \"${system.systemId}\" --systemKey \"${system.systemKey}\" --ingestUrl \"${baseUrl}\"`;
 
-    res.json({ command });
+    res.json({
+      linux:   `curl -sL "${baseUrl}/install.sh" | bash -s -- --ingestUrl "${baseUrl}"`,
+      windows: `Invoke-WebRequest -Uri "${baseUrl}/install.ps1" -OutFile install.ps1; .\\install.ps1 -ingestUrl "${baseUrl}"`
+    });
   } catch (err) {
     console.error(err);
     res.status(500).send("Failed to generate install command");
