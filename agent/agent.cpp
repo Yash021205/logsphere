@@ -14,7 +14,9 @@
     #include <winsock2.h>
     #include <windows.h>
     #include <psapi.h>
+    #include <winevt.h>
     #pragma comment(lib, "psapi.lib")
+    #pragma comment(lib, "wevtapi.lib")
     #pragma warning(disable : 4996)
 #else
     #include <unistd.h>
@@ -27,8 +29,8 @@ using json = nlohmann::json;
 
 // ── Install directory — credentials live here permanently ────────
 #ifdef _WIN32
-    // C:\ProgramData\LogSphere\config.json
-    const std::string INSTALL_DIR  = std::string(getenv("PROGRAMFILES") ? getenv("PROGRAMFILES") : "C:\\Program Files") + "\\LogSphere";
+    // C:\ProgramData\LogSphere\config.json  (machine-wide; survives service accounts)
+    const std::string INSTALL_DIR  = std::string(getenv("PROGRAMDATA") ? getenv("PROGRAMDATA") : "C:\\ProgramData") + "\\LogSphere";
     const std::string CONFIG_PATH  = INSTALL_DIR + "\\config.json";
 #else
     const std::string INSTALL_DIR  = "/etc/logsphere";
@@ -169,6 +171,127 @@ std::string normalizeLog(const std::string &log) {
     if (pos != std::string::npos) return log.substr(0, pos);
     return log;
 }
+
+#ifdef _WIN32
+// ════════════════════════════════════════════════════════════════
+// Windows Event Log reader (Vista+ EvtQuery API)
+//
+// Reads Warning (Level=3) and Error (Level=2) events from the
+// Application and System channels.  lastRecordId is updated to
+// the highest EventRecordID seen so events are never re-read.
+// ════════════════════════════════════════════════════════════════
+
+static std::string wideToUtf8(const wchar_t* w) {
+    if (!w || !*w) return "";
+    int len = WideCharToMultiByte(CP_UTF8, 0, w, -1, nullptr, 0, nullptr, nullptr);
+    if (len <= 0) return "";
+    std::string out(len, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, w, -1, &out[0], len, nullptr, nullptr);
+    while (!out.empty() && out.back() == '\0') out.pop_back();
+    return out;
+}
+
+std::vector<std::string> readWindowsEventLog(long &lastRecordId) {
+    std::vector<std::string> result;
+
+    std::wstring xpath = L"*[System[(Level=2 or Level=3)";
+    if (lastRecordId > 0)
+        xpath += L" and EventRecordID>" + std::to_wstring(lastRecordId);
+    xpath += L"]]";
+
+    const wchar_t* channels[] = { L"Application", L"System" };
+
+    for (auto* channel : channels) {
+        EVT_HANDLE hQuery = EvtQuery(
+            NULL, channel, xpath.c_str(),
+            EvtQueryChannelPath | EvtQueryForwardDirection);
+        if (!hQuery) continue;
+
+        EVT_HANDLE hEvent = nullptr;
+        DWORD fetched = 0;
+
+        while (EvtNext(hQuery, 1, &hEvent, 5000, 0, &fetched) && fetched > 0) {
+            DWORD needed = 0, propCount = 0;
+            // First call: get required buffer size
+            EvtRender(NULL, hEvent, EvtRenderEventXml, 0, nullptr, &needed, &propCount);
+
+            if (GetLastError() == ERROR_INSUFFICIENT_BUFFER && needed > 0) {
+                std::vector<wchar_t> xmlBuf(needed / sizeof(wchar_t) + 2, 0);
+                if (EvtRender(NULL, hEvent, EvtRenderEventXml, needed,
+                              xmlBuf.data(), &needed, &propCount)) {
+
+                    std::wstring xml = xmlBuf.data();
+
+                    // Extract text between <Tag>...</Tag>
+                    auto extract = [&](const std::wstring& tag) -> std::wstring {
+                        std::wstring o = L"<" + tag + L">",
+                                     c = L"</" + tag + L">";
+                        auto s = xml.find(o), e = xml.find(c);
+                        if (s == std::wstring::npos || e == std::wstring::npos) return L"";
+                        return xml.substr(s + o.size(), e - s - o.size());
+                    };
+
+                    // Track highest RecordID
+                    std::wstring recIdW = extract(L"EventRecordID");
+                    if (!recIdW.empty()) {
+                        try { long r = std::stol(recIdW); if (r > lastRecordId) lastRecordId = r; }
+                        catch (...) {}
+                    }
+
+                    // Severity label
+                    std::string levelLabel = "Warning";
+                    if (extract(L"Level") == L"2") levelLabel = "Error";
+
+                    // Provider name for EvtFormatMessage
+                    std::wstring provider;
+                    auto np = xml.find(L"Name='");
+                    if (np != std::wstring::npos) {
+                        np += 6;
+                        auto ne = xml.find(L"'", np);
+                        if (ne != std::wstring::npos) provider = xml.substr(np, ne - np);
+                    }
+
+                    // Format human-readable message
+                    std::string message;
+                    EVT_HANDLE hMeta = EvtOpenPublisherMetadata(
+                        NULL, provider.empty() ? nullptr : provider.c_str(), NULL, 0, 0);
+                    if (hMeta) {
+                        DWORD msgLen = 0;
+                        EvtFormatMessage(hMeta, hEvent, 0, 0, nullptr,
+                                        EvtFormatMessageEvent, 0, nullptr, &msgLen);
+                        if (msgLen > 0) {
+                            std::vector<wchar_t> msgBuf(msgLen + 1, 0);
+                            if (EvtFormatMessage(hMeta, hEvent, 0, 0, nullptr,
+                                                EvtFormatMessageEvent, msgLen,
+                                                msgBuf.data(), &msgLen))
+                                message = wideToUtf8(msgBuf.data());
+                        }
+                        EvtClose(hMeta);
+                    }
+
+                    // Fallback: at least report EventID
+                    if (message.empty()) {
+                        std::wstring evtId = extract(L"EventID");
+                        message = "[EventID " + wideToUtf8(evtId.c_str()) + "]";
+                    }
+
+                    // Sanitise: collapse whitespace, truncate long messages
+                    for (auto& c : message)
+                        if (c == '\n' || c == '\r' || c == '\t') c = ' ';
+                    if (message.size() > 250) message = message.substr(0, 250) + "...";
+
+                    result.push_back(
+                        "[" + wideToUtf8(channel) + "][" + levelLabel + "] " + message);
+                }
+            }
+            EvtClose(hEvent);
+            hEvent = nullptr;
+        }
+        EvtClose(hQuery);
+    }
+    return result;
+}
+#endif // _WIN32
 
 json aggregateLogs(const std::vector<std::string> &logs,
                    std::unordered_map<std::string, LogStat> &store)
@@ -428,12 +551,13 @@ int main() {
         }
     }
 
-    // ── Step 3: Normal ingest loop (completely unchanged) ────────
-    std::string logFilePath = "app.log";
+    // ── Step 3: Normal ingest loop ───────────────────────────────
+    // Windows: reads from Windows Event Log (Application + System).
+    // Linux:   tails a flat log file.
 #ifndef _WIN32
-    logFilePath = "/var/log/syslog";
-#endif
+    std::string logFilePath = "/var/log/syslog";
     if (getenv("LOG_FILE_PATH")) logFilePath = getenv("LOG_FILE_PATH");
+#endif
 
     httplib::Client cli(ingestUrl.c_str());
     cli.set_connection_timeout(5, 0);
@@ -447,7 +571,11 @@ int main() {
         double mem       = getMemoryUsage();
         int    processes = getProcessCount();
 
-        auto newLogs   = readNewLogs(logFilePath, lastPos);
+#ifdef _WIN32
+        auto newLogs = readWindowsEventLog(lastPos);
+#else
+        auto newLogs = readNewLogs(logFilePath, lastPos);
+#endif
         auto aggregated = aggregateLogs(newLogs, logStore);
 
         std::cout << "CPU: " << cpu
