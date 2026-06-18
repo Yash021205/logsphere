@@ -6,41 +6,29 @@ export default function SystemSelector({ selectedSystem, setSelectedSystem }) {
   const [systems, setSystems] = useState([]);
 
   useEffect(() => {
-    axios.get('/systems')
+    const token = localStorage.getItem("token");
+    axios.get('/systems', { headers: { Authorization: `Bearer ${token}` } })
       .then(res => setSystems(res.data))
       .catch(err => console.error("Failed to load systems", err));
   }, []);
 
   useEffect(() => {
-    if (systems.length > 0 && !selectedSystem) {
-      setSelectedSystem(systems[0]);
-    }
+    if (systems.length > 0 && !selectedSystem) setSelectedSystem(systems[0]);
   }, [systems, selectedSystem, setSelectedSystem]);
 
   useEffect(() => {
-    if (selectedSystem) {
-      socket.emit("join-system", selectedSystem);
-    }
+    if (selectedSystem) socket.emit("join-system", selectedSystem);
   }, [selectedSystem]);
 
   return (
-    <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-      <label style={{ fontSize: '0.9rem', color: '#94a3b8' }}>Select System:</label>
-      <select 
-        value={selectedSystem} 
+    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+      <span style={{ fontSize: ".78rem", color: "var(--muted)", fontWeight: "500" }}>System</span>
+      <select
+        className="ls-select"
+        value={selectedSystem}
         onChange={e => setSelectedSystem(e.target.value)}
-        style={{
-          padding: "6px 12px",
-          borderRadius: "8px",
-          background: "#1e293b",
-          color: "white",
-          border: "1px solid #334155",
-          cursor: "pointer"
-        }}
       >
-        {systems.map((sys, i) => (
-          <option key={i} value={sys}>{sys}</option>
-        ))}
+        {systems.map((s, i) => <option key={i} value={s}>{s}</option>)}
       </select>
     </div>
   );

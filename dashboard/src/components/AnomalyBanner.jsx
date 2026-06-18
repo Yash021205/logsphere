@@ -1,50 +1,32 @@
 import { useEffect, useState } from "react";
 import { socket } from "../socket";
 
-function AnomalyBanner({ systemId }) {
+export default function AnomalyBanner({ systemId }) {
   const [alerts, setAlerts] = useState([]);
 
   useEffect(() => {
-    const handleAnomaly = (data) => {
-      // Filter anomaly alerts by systemId if provided
-      const filtered = systemId 
-        ? data.filter(a => a.systemId === systemId)
-        : data;
-        
+    const handle = (data) => {
+      const filtered = systemId ? data.filter(a => a.systemId === systemId) : data;
       if (filtered.length > 0) {
         setAlerts(filtered);
         setTimeout(() => setAlerts([]), 7000);
       }
     };
-
-    socket.on("anomaly", handleAnomaly);
-    return () => socket.off("anomaly", handleAnomaly);
+    socket.on("anomaly", handle);
+    return () => socket.off("anomaly", handle);
   }, [systemId]);
 
   if (alerts.length === 0) return null;
 
   return (
-    <div style={{ marginBottom: "10px" }}>
+    <div>
       {alerts.map((a, i) => (
-        <div
-          key={i}
-          style={{
-            background: "#3f3f0a",
-            color: "#facc15",
-            padding: "10px 14px",
-            borderRadius: "6px",
-            marginBottom: "6px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            fontWeight: "500"
-          }}
-        >
-          <span>
-            ⚠ {a.type} anomaly — {a.message}
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px", marginBottom: "8px", background: "rgba(245,158,11,.08)", border: "1px solid rgba(245,158,11,.3)", borderRadius: "10px", animation: "fadeInUp .3s ease" }}>
+          <span style={{ fontSize: "1rem" }}>⚠️</span>
+          <span style={{ flex: 1, fontSize: ".88rem", color: "#fbbf24" }}>
+            <strong>Anomaly Detected</strong> — {a.type}: {a.message}
           </span>
-
-          <span style={{ fontSize: "12px", opacity: 0.8 }}>
+          <span style={{ padding: "3px 10px", background: "rgba(245,158,11,.15)", border: "1px solid rgba(245,158,11,.3)", borderRadius: "999px", fontSize: ".72rem", fontWeight: "700", color: "#f59e0b" }}>
             ANOMALY
           </span>
         </div>
@@ -52,7 +34,3 @@ function AnomalyBanner({ systemId }) {
     </div>
   );
 }
-
-export default AnomalyBanner;
-
-
