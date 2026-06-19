@@ -130,8 +130,8 @@ const forgotPassword = async (req, res) => {
     await user.save();
 
     // Create reset URL
-    // In production, BASE_URL should come from env. For local dev we use localhost:5173
-    const origin = req.headers.origin || "http://localhost:5173";
+    // In production, DASHBOARD_URL should be set in .env. For local dev we fallback to origin or localhost:5173
+    const origin = process.env.DASHBOARD_URL || req.headers.origin || "http://localhost:5173";
     const resetUrl = `${origin}/reset-password?token=${resetToken}&email=${email}`;
 
     // Send email

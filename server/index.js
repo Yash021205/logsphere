@@ -64,15 +64,26 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("join-system", (systemId) => {
+  socket.on("join-system", async (systemId) => {
     if (socket.user && socket.user.role === "Admin") {
-      // Ensure the Admin user actually belongs to this systemId to prevent cross-tenant data leaks
-      if (socket.user.systemId !== systemId) {
+      // Allow if it's the Admin's own system
+      if (socket.user.systemId === systemId) {
+        socket.join(systemId);
+        console.log(`Admin joined own system room: ${systemId}`);
+        return;
+      }
+      
+      // Look up if this systemId belongs to a Client owned by this Admin
+      const User = require("./models/userModel");
+      const client = await User.findOne({ systemId: systemId, adminEmail: socket.user.email, role: "Client" });
+      
+      if (!client) {
         console.warn(`Security Warning: User ${socket.user.email} attempted to join unauthorized system ${systemId}`);
         return;
       }
+      
       socket.join(systemId);
-      console.log(`Admin joined system room: ${systemId}`);
+      console.log(`Admin joined client system room: ${systemId}`);
     }
   });
 });
