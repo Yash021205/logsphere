@@ -1,6 +1,8 @@
 const User = require("../models/userModel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
 
 // ── helpers ─────────────────────────────────────────────────────
 const signToken = (user) =>
@@ -108,4 +110,111 @@ const refresh = async (req, res) => {
   }
 };
 
-module.exports = { register, login, refresh };
+// FORGOT PASSWORD
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      // Return 200 even if not found to prevent email enumeration
+      return res.status(200).json({ message: "If that email exists, a reset link has been sent." });
+    }
+
+    // Generate token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+    user.resetToken = hashedToken;
+    user.resetTokenExpiry = Date.now() + 3600000; // 1 hour
+    await user.save();
+
+    // Create reset URL
+    // In production, BASE_URL should come from env. For local dev we use localhost:5173
+    const origin = req.headers.origin || "http://localhost:5173";
+    const resetUrl = `${origin}/reset-password?token=${resetToken}&email=${email}`;
+
+    // Send email
+    // This is a test account setup for nodemailer. In prod, configure your real SMTP credentials
+    let transporter = nodemailer.createTransport({
+      host: "smtp.ethereal.email",
+      port: 587,
+      secure: false, // true for 465, false for other ports
+      auth: {
+          user: process.env.EMAIL_USER || 'test@ethereal.email',
+          pass: process.env.EMAIL_PASS || 'pass123',
+      },
+    });
+
+    const mailOptions = {
+      from: '"LogSphere Support" <support@logsphere.io>',
+      to: user.email,
+      subject: "LogSphere Password Reset",
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2>Password Reset Request</h2>
+          <p>You recently requested to reset your password for your LogSphere account.</p>
+          <p>Click the button below to reset it. This link is valid for 1 hour.</p>
+          <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background: #7c3aed; color: #fff; text-decoration: none; border-radius: 6px; margin: 20px 0;">Reset Password</a>
+          <p style="color: #64748b; font-size: 0.9em;">If you didn't request a password reset, please ignore this email.</p>
+        </div>
+      `,
+    };
+
+    // We don't await the sendMail in this mock example if the credentials are bad
+    // because we want the response to go through.
+    try {
+        await transporter.sendMail(mailOptions);
+    } catch (mailErr) {
+        console.log("Could not send email. Ethereal account might be needed or SMTP not configured.", mailErr);
+        // For development, just log the URL so the user can test the flow!
+        console.log("\n=================================");
+        console.log("TESTING MODE: Reset URL is:");
+        console.log(resetUrl);
+        console.log("=================================\n");
+    }
+
+    res.status(200).json({ message: "If that email exists, a reset link has been sent." });
+
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({ message: "Error processing request." });
+  }
+};
+
+// RESET PASSWORD
+const resetPassword = async (req, res) => {
+  try {
+    const { email, token, newPassword } = req.body;
+
+    if (!email || !token || !newPassword) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+      email,
+      resetToken: hashedToken,
+      resetTokenExpiry: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired reset token" });
+    }
+
+    // Set new password
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetToken = undefined;
+    user.resetTokenExpiry = undefined;
+    await user.save();
+
+    res.status(200).json({ message: "Password has been reset successfully" });
+
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ message: "Error resetting password." });
+  }
+};
+
+module.exports = { register, login, refresh, forgotPassword, resetPassword };

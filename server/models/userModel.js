@@ -28,6 +28,17 @@ const UserSchema = new mongoose.Schema({
     lowercase: true,
     index: true
   },
+
+  // ── Password reset ─────────────────────────────────────────────
+  resetToken: {
+    type: String,   // SHA-256 hash of the raw token sent by email
+    default: null
+  },
+  resetTokenExpiry: {
+    type: Date,     // Token expires after 1 hour
+    default: null
+  },
+
   createdAt: {
     type: Date,
     default: Date.now
@@ -35,4 +46,4 @@ const UserSchema = new mongoose.Schema({
 
 });
 
-module.exports = mongoose.model("User", UserSchema);
+module.exports = mongoose.model("User", UserSchema);

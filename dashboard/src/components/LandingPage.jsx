@@ -118,7 +118,7 @@ export default function LandingPage() {
           <div className="lp-terminal-body">
             <div className="lp-t-line">
               <span className="lp-t-prompt">$</span>
-              <span className="lp-t-cmd">curl -sL "{BASE_URL}/install.sh" | bash -s -- --ingestUrl "{BASE_URL}"</span>
+              <span className="lp-t-cmd">{`curl -sL "${BASE_URL}/install.sh" | bash -s -- --ingestUrl "${BASE_URL}"`}</span>
             </div>
             <div className="lp-t-line"><span className="lp-t-out">  Downloading LogSphere agent binary...</span></div>
             <div className="lp-t-line"><span className="lp-t-out">  Writing config to /etc/logsphere/</span></div>

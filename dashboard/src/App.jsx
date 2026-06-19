@@ -3,6 +3,7 @@ import { useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import LandingPage      from "./components/LandingPage";
 import AuthPage         from "./components/AuthPage";
+import ResetPassword    from "./components/ResetPassword";
 import AgentSetup       from "./components/AgentSetup";
 import SystemSelector   from "./components/SystemSelector";
 import CpuChart         from "./components/CpuChart";
@@ -35,9 +36,9 @@ const NAV = [
 ];
 
 /* ── Sidebar ─────────────────────────────────────────────────── */
-function Sidebar({ active, setActive, userRole }) {
+function Sidebar({ active, setActive, userRole, isOpen, onClose }) {
   return (
-    <aside className="dash-sidebar">
+    <aside className={`dash-sidebar${isOpen ? " sidebar-mobile-open" : ""}`}>
       {/* Logo */}
       <div style={{ padding: "24px 20px 20px", borderBottom: "1px solid var(--border)" }}>
         <div style={{ fontSize: "1.35rem", fontWeight: "700", background: "var(--g-primary)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", letterSpacing: "-.02em" }}>
@@ -55,7 +56,7 @@ function Sidebar({ active, setActive, userRole }) {
           <div
             key={n.id}
             className={`nav-item ${active === n.id ? "active" : ""}`}
-            onClick={() => setActive(n.id)}
+            onClick={() => { setActive(n.id); onClose(); }}
           >
             <span className="nav-icon">{n.icon}</span>
             <span>{n.label}</span>
@@ -85,14 +86,23 @@ function Sidebar({ active, setActive, userRole }) {
 }
 
 /* ── Top bar ─────────────────────────────────────────────────── */
-function TopBar({ activeSection, userRole, selectedSystem, setSelectedSystem, selectedHost, setSelectedHost, range, setRange, onHostsLoaded }) {
+function TopBar({ activeSection, userRole, selectedSystem, setSelectedSystem, selectedHost, setSelectedHost, range, setRange, onHostsLoaded, sidebarOpen, toggleSidebar }) {
   return (
     <header className="dash-topbar">
-      {/* Breadcrumb */}
-      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        <span style={{ color: "var(--muted)", fontSize: ".88rem" }}>LogSphere</span>
-        <span style={{ color: "var(--dim)" }}>/</span>
-        <span style={{ color: "var(--text-2)", fontSize: ".88rem", fontWeight: "600", textTransform: "capitalize" }}>{activeSection}</span>
+      {/* Hamburger (mobile only) + Breadcrumb */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <button
+          className={`hamburger${sidebarOpen ? " open" : ""}`}
+          onClick={toggleSidebar}
+          aria-label="Toggle navigation"
+        >
+          <span /><span /><span />
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ color: "var(--muted)", fontSize: ".88rem" }}>LogSphere</span>
+          <span style={{ color: "var(--dim)" }}>/</span>
+          <span style={{ color: "var(--text-2)", fontSize: ".88rem", fontWeight: "600", textTransform: "capitalize" }}>{activeSection}</span>
+        </div>
       </div>
 
       {/* Controls right side */}
@@ -128,6 +138,7 @@ function Dashboard() {
   const [selectedSystem,  setSelectedSystem]  = useState("");
   const [systemHasHosts,  setSystemHasHosts]  = useState(true);
   const [range,           setRange]           = useState(5);
+  const [sidebarOpen,     setSidebarOpen]     = useState(false);
 
   const { toasts, showToast, dismissToast } = useToast();
 
@@ -171,7 +182,18 @@ function Dashboard() {
 
   return (
     <div className="dash-layout">
-      <Sidebar active={activeSection} setActive={setActiveSection} userRole={userRole} />
+      {/* Mobile overlay — closes sidebar when tapped */}
+      {sidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      <Sidebar
+        active={activeSection}
+        setActive={setActiveSection}
+        userRole={userRole}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
       <div className="dash-main">
         <TopBar
@@ -184,6 +206,8 @@ function Dashboard() {
           range={range}
           setRange={setRange}
           onHostsLoaded={setSystemHasHosts}
+          sidebarOpen={sidebarOpen}
+          toggleSidebar={() => setSidebarOpen(o => !o)}
         />
 
         <div className="dash-content">
@@ -271,9 +295,10 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/"          element={<LandingPage />} />
-        <Route path="/auth"      element={<AuthPage />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/"                element={<LandingPage />} />
+        <Route path="/auth"            element={<AuthPage />} />
+        <Route path="/reset-password"  element={<ResetPassword />} />
+        <Route path="/dashboard"       element={<Dashboard />} />
       </Routes>
     </Router>
   );

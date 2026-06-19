@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Login from './Login';
 import Signup from './Signup';
+import ForgotPassword from './ForgotPassword';
 import '../LandingPage.css';
 
 const BULLETS = [
@@ -11,7 +12,7 @@ const BULLETS = [
 ];
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [view, setView] = useState('login'); // 'login', 'signup', 'forgot'
 
   return (
     <div className="auth-wrap">
@@ -47,26 +48,27 @@ export default function AuthPage() {
       <div className="auth-right">
         <div style={{ maxWidth: '380px', width: '100%', margin: '0 auto' }}>
           <h1 style={{ fontSize: '1.7rem', fontWeight: '700', marginBottom: '6px', letterSpacing: '-.02em' }}>
-            {isLogin ? 'Welcome back' : 'Create account'}
+            {view === 'login' ? 'Welcome back' : view === 'signup' ? 'Create account' : 'Reset password'}
           </h1>
           <p style={{ color: 'var(--muted)', fontSize: '.92rem', marginBottom: '32px' }}>
-            {isLogin ? 'Sign in to your LogSphere dashboard' : 'Start monitoring your infrastructure today'}
+            {view === 'login' ? 'Sign in to your LogSphere dashboard' : view === 'signup' ? 'Start monitoring your infrastructure today' : 'We will send you a reset link'}
           </p>
 
-          {/* Tab switcher */}
-          <div className="auth-tabs">
-            <button className={`auth-tab ${isLogin ? 'active' : ''}`} onClick={() => setIsLogin(true)}>
-              Sign In
-            </button>
-            <button className={`auth-tab ${!isLogin ? 'active' : ''}`} onClick={() => setIsLogin(false)}>
-              Sign Up
-            </button>
-          </div>
+          {/* Tab switcher - hide when in forgot password view */}
+          {view !== 'forgot' && (
+            <div className="auth-tabs">
+              <button className={`auth-tab ${view === 'login' ? 'active' : ''}`} onClick={() => setView('login')}>
+                Sign In
+              </button>
+              <button className={`auth-tab ${view === 'signup' ? 'active' : ''}`} onClick={() => setView('signup')}>
+                Sign Up
+              </button>
+            </div>
+          )}
 
-          {isLogin
-            ? <Login  onSwitch={() => setIsLogin(false)} />
-            : <Signup onSwitch={() => setIsLogin(true)}  />
-          }
+          {view === 'login' && <Login  onSwitch={() => setView('signup')} onForgot={() => setView('forgot')} />}
+          {view === 'signup' && <Signup onSwitch={() => setView('login')}  />}
+          {view === 'forgot' && <ForgotPassword onSwitch={() => setView('login')} />}
         </div>
       </div>
     </div>

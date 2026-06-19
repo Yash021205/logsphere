@@ -163,7 +163,17 @@ router.post("/claim/:deviceId", authMiddleware, async (req, res) => {
 
         // Store who owns this device (using emails, matching your User model)
         device.ownerEmail = req.email;
-        device.ownerAdminEmail = req.role === "Admin" ? req.email : null;
+
+        if (req.role === "Admin") {
+            // Admin owns it directly
+            device.ownerAdminEmail = req.email;
+        } else {
+            // Client — look up which Admin they registered under so the
+            // Admin's middleware query (User.find({ adminEmail: req.email }))
+            // can discover this Client's system in the SystemSelector.
+            const claimingUser = await User.findOne({ email: req.email });
+            device.ownerAdminEmail = claimingUser?.adminEmail || null;
+        }
 
         await device.save();
 

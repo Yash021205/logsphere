@@ -279,3 +279,100 @@ select.ls-select option { background:#0c0c24; color:var(--text); }
 
 .anim-fade-up { animation: fadeInUp .5s ease both; }
 .anim-fade    { animation: fadeIn   .4s ease both; }
+
+/* ── Hamburger button (mobile only) ─────────────────────────── */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background .15s;
+}
+.hamburger:hover { background: rgba(255,255,255,.1); }
+.hamburger span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: var(--text-2);
+  border-radius: 2px;
+  transition: all .25s ease;
+}
+/* X animation when sidebar is open */
+.hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ── Sidebar overlay (mobile) ────────────────────────────────── */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 99;
+  backdrop-filter: blur(2px);
+  animation: fadeIn .2s ease;
+}
+
+/* ── Responsive — Tablet (≤ 1024px) ─────────────────────────── */
+@media (max-width: 1024px) {
+  :root { --sidebar: 200px; }
+}
+
+/* ── Responsive — Mobile (≤ 768px) ──────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Sidebar becomes a fixed drawer, off-screen by default */
+  .dash-sidebar {
+    transform: translateX(-100%);
+    transition: transform .28s cubic-bezier(.4,0,.2,1);
+    z-index: 200;
+    width: 260px;
+  }
+  .dash-sidebar.sidebar-mobile-open {
+    transform: translateX(0);
+    box-shadow: 4px 0 40px rgba(0,0,0,.6);
+  }
+
+  /* Overlay visible on mobile when sidebar is open */
+  .sidebar-overlay { display: block; }
+
+  /* Main area takes full width on mobile */
+  .dash-main { margin-left: 0; }
+
+  /* Topbar: show hamburger, allow wrapping */
+  .dash-topbar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--topbar);
+    padding: 10px 16px;
+    gap: 8px;
+  }
+  .hamburger { display: flex; }
+
+  /* Content padding */
+  .dash-content { padding: 16px; }
+
+  /* Force single-column on most grids */
+  .dash-content [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Nav items slightly more compact */
+  .nav-item { padding: 10px 16px; }
+}
+
+/* ── Responsive — Small Mobile (≤ 480px) ────────────────────── */
+@media (max-width: 480px) {
+  .dash-topbar { padding: 8px 12px; }
+  .dash-content { padding: 12px; }
+  select.ls-select { font-size: .82rem; padding: 6px 30px 6px 10px; }
+}

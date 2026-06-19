@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "../api/axios";
 
-export default function Login({ onSwitch }) {
+export default function Login({ onSwitch, onForgot }) {
   const navigate = useNavigate();
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
@@ -60,6 +60,12 @@ export default function Login({ onSwitch }) {
           {error}
         </div>
       )}
+
+      <div style={{ textAlign: "right", marginTop: "-10px" }}>
+        <span onClick={onForgot} style={{ color: "var(--p-300)", cursor: "pointer", fontSize: ".82rem", fontWeight: "500" }}>
+          Forgot password?
+        </span>
+      </div>
 
       <button
         className="btn-primary"
