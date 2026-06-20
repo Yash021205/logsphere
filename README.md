@@ -25,27 +25,52 @@ LogSphere features built-in **Multi-tenant RBAC (Role-Based Access Control)**, a
 ## 🏗️ Architecture
 
 ```mermaid
-C4Context
-    title System Architecture for LogSphere
+flowchart TD
+    %% Styling Classes
+    classDef actor fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+    classDef ui fill:#ec4899,stroke:#be185d,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+    classDef api fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+    classDef db fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+    classDef edge fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+    classDef boundary fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px,stroke-dasharray: 5 5,color:#333;
 
-    Person(admin, "System Administrator", "Full visibility, manages client fleets & alerts")
-    Person(client, "System Client", "Restricted visibility, monitors their own system")
-    
-    System_Boundary(b0, "LogSphere Infrastructure") {
-        System(dashboard, "LogSphere Frontend Dashboard", "React / Vite SPA. Visualizes incoming metrics & manages RBAC.")
-        System(server, "LogSphere Backend Server", "Node.js REST API & WebSocket Gateway with ML Anomaly Detection.")
-        SystemDb(db, "MongoDB", "Stores Users, Hosts, Logs, Timeseries Metrics, and Alerts")
-    }
+    %% Components
+    subgraph Users ["👥 User Access"]
+        Admin["👤 System Administrator<br>(Full Visibility & Alerts)"]:::actor
+        Client["👤 System Client<br>(Restricted Dashboard)"]:::actor
+    end
 
-    System_Ext(agent1, "Windows Host", "C++ Agent collecting System Telemetry")
-    System_Ext(agent2, "Linux Host", "C++ Agent collecting System Telemetry")
-    
-    Rel(agent1, server, "HTTPS POST /ingest", "JSON Metrics & Logs")
-    Rel(agent2, server, "HTTPS POST /ingest", "JSON Metrics & Logs")
-    Rel(server, db, "Reads / Writes", "Mongoose ORM")
-    Rel(server, dashboard, "Pushes Socket events", "Socket.IO")
-    Rel(admin, dashboard, "Views Full Dashboard & Configures Rules", "HTTPS / JWT")
-    Rel(client, dashboard, "Views Restricted Dashboard", "HTTPS / JWT")
+    subgraph LogSphere ["LogSphere Core Infrastructure"]
+        Dashboard["💻 React SPA Dashboard<br>(Vite / Recharts)"]:::ui
+        
+        subgraph Backend ["Server Tier"]
+            NodeAPI["⚙️ Node.js REST API<br>(Express + ML Engine)"]:::api
+            SocketGW["🔌 WebSocket Gateway<br>(Socket.IO)"]:::api
+        end
+        
+        MongoDB[("🗄️ MongoDB Database<br>(Timeseries Metrics, Logs, RBAC)")]:::db
+    end
+
+    subgraph Agents ["🌐 Edge Telemetry (Remote Hosts)"]
+        WinAgent["🪟 Windows Host<br>(C++ Native Agent)"]:::edge
+        LinAgent["🐧 Linux Host<br>(C++ Native Agent)"]:::edge
+    end
+
+    %% Connections
+    Admin -- "HTTPS / JWT" --> Dashboard
+    Client -- "HTTPS / JWT" --> Dashboard
+
+    Dashboard <--"REST API"--> NodeAPI
+    SocketGW --"Real-time Updates"--> Dashboard
+
+    WinAgent --"HTTPS POST /ingest<br>(Metrics & Logs)"--> NodeAPI
+    LinAgent --"HTTPS POST /ingest<br>(Metrics & Logs)"--> NodeAPI
+
+    NodeAPI --"Internal Event Emitter"--> SocketGW
+    NodeAPI <--"Mongoose ORM"--> MongoDB
+
+    %% Apply boundary styles
+    class Users,LogSphere,Backend,Agents boundary;
 ```
 
 ---
