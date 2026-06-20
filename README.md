@@ -1,11 +1,26 @@
-# LogSphere
+# LogSphere 🌐
 
 <p align="center">
-  <em>Real-time Multi-Platform System Monitoring & Analytics Platform</em>
+  <em>Real-time Multi-Platform System Monitoring, RBAC & Analytics Platform</em>
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
+  <img src="https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
+  <img src="https://img.shields.io/badge/C%2B%2B-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++" />
+  <img src="https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socket.io&logoColor=white" alt="Socket.IO" />
+</p>
+
+---
+
 ## 📖 Overview
-LogSphere is an end-to-end telemetry platform built to provide instant insights into your entire infrastructure. It aggregates raw diagnostics (CPU usage, Memory utilization, Process Counts) alongside error logs from disparate machines into a single, unified "pane of glass" dashboard.
+
+LogSphere is an advanced, end-to-end telemetry platform built to provide instant insights into your entire infrastructure. It aggregates raw diagnostics (CPU usage, Memory utilization, Process Counts) alongside error logs from disparate machines into a single, unified "pane of glass" dashboard. 
+
+LogSphere features built-in **Multi-tenant RBAC (Role-Based Access Control)**, allowing Administrators to oversee entire fleets of devices while individual Clients can safely monitor only their own systems. Advanced features include **Machine Learning-based anomaly detection**, threshold-based **Alert Rules**, and real-time Socket.IO streaming.
+
+---
 
 ## 🏗️ Architecture
 
@@ -13,38 +28,65 @@ LogSphere is an end-to-end telemetry platform built to provide instant insights 
 C4Context
     title System Architecture for LogSphere
 
-    Person(admin, "System Administrator", "Monitors infrastructure via Dashboard")
+    Person(admin, "System Administrator", "Full visibility, manages client fleets & alerts")
+    Person(client, "System Client", "Restricted visibility, monitors their own system")
     
     System_Boundary(b0, "LogSphere Infrastructure") {
-        System(dashboard, "LogSphere Frontend Dashboard", "React / Vite SPA. Visualizes incoming metrics.")
-        System(server, "LogSphere Backend Server", "Node.js REST API & WebSocket Gateway.")
-        SystemDb(db, "MongoDB", "Stores Hosts, Logs, Timeseries Metrics, and Alerts")
+        System(dashboard, "LogSphere Frontend Dashboard", "React / Vite SPA. Visualizes incoming metrics & manages RBAC.")
+        System(server, "LogSphere Backend Server", "Node.js REST API & WebSocket Gateway with ML Anomaly Detection.")
+        SystemDb(db, "MongoDB", "Stores Users, Hosts, Logs, Timeseries Metrics, and Alerts")
     }
 
     System_Ext(agent1, "Windows Host", "C++ Agent collecting System Telemetry")
     System_Ext(agent2, "Linux Host", "C++ Agent collecting System Telemetry")
-    System_Ext(mock, "Mock Agents", "Node.js Test Scripts simulating infrastructure load")
     
-    Rel(agent1, server, "HTTPS POST /ingest", "JSON Metrics")
-    Rel(agent2, server, "HTTPS POST /ingest", "JSON Metrics")
-    Rel(mock, server, "HTTPS POST /ingest", "JSON Metrics")
+    Rel(agent1, server, "HTTPS POST /ingest", "JSON Metrics & Logs")
+    Rel(agent2, server, "HTTPS POST /ingest", "JSON Metrics & Logs")
     Rel(server, db, "Reads / Writes", "Mongoose ORM")
     Rel(server, dashboard, "Pushes Socket events", "Socket.IO")
-    Rel(admin, dashboard, "Views Dashboard & Configures Rules", "HTTPS")
+    Rel(admin, dashboard, "Views Full Dashboard & Configures Rules", "HTTPS / JWT")
+    Rel(client, dashboard, "Views Restricted Dashboard", "HTTPS / JWT")
 ```
 
-## ⚙️ How It Works (Data Workflow)
+---
 
-1. **Agent Deployment**: A lightweight, native C++ agent code is built and deployed on the target machine (Windows/Linux).
-2. **Metric Collection**: The agent samples CPU, RAM, and captures new application log files down to the millisecond.
-3. **Data Ingestion**: Polled data is sent securely to the Node.js Express Backend via the RESTful `/ingest` route using secure `systemKey` authorization.
-4. **Data Aggregation**: The backend logs raw metrics to MongoDB immediately while broadcasting them to connected Admins. Background cron jobs run automatically every 5 minutes and 1 hour to condense metrics into historical averages, saving database space.
-5. **Real-time Visualization**: An Administrator accesses the React Dashboard. Via established Socket.IO connections, visual charts and metric widgets update instantaneously without ever needing to reload the webpage.
+## ✨ Key Features & Workflow
 
-## 💻 Tech Stack Overview
+- 🔒 **Role-Based Access Control (RBAC)**: Secure multi-tenant architecture. Admins register first, and Clients register using their Admin's email to link accounts. Admins can view metrics across all clients, while clients only see their own telemetry.
+- 🚀 **Zero-Dependency Agent Deployment**: A lightweight, native C++ agent code is built and deployed on the target machine (Windows/Linux) via OTA installation scripts. No Python or Java runtimes required!
+- 📊 **Metric Collection**: The agent samples CPU, RAM, and captures new application log files down to the millisecond.
+- 🛡️ **Secure Data Ingestion**: Polled data is sent securely to the Node.js Express Backend via the RESTful `/ingest` route using secure `systemKey` authorization.
+- 🧠 **Data Aggregation & Machine Learning**: The backend logs raw metrics to MongoDB immediately while broadcasting them to connected users. Background jobs condense metrics into historical averages, and an ML layer analyzes trends for anomaly detection.
+- 🔔 **Alert Rules Engine**: Users can define specific CPU and memory thresholds to receive real-time notifications when systems are under stress.
+- ⚡ **Real-time Visualization**: Via established Socket.IO connections, visual charts, log tables, and metric widgets update instantaneously without ever needing to reload the webpage.
 
-- **Agent**: Native C++ (Zero-dependency via `httplib.h` & `json.hpp`). Built for high efficiency and minimum footprint.
-- **Backend API**: Node.js, Express 5, Mongoose, Socket.IO.
+---
+
+## 📁 Repository Structure
+
+```text
+logsphere/
+├── agent/            # C++ Native Agent for Windows/Linux
+│   ├── agent.cpp     # Cross-platform telemetry collection code
+│   └── install.ps1   # PowerShell OTA Installer
+├── server/           # Node.js Express Backend
+│   ├── index.js      # Main Express / Socket.IO entry point
+│   ├── controllers/  # API business logic (Auth, Ingest, Metrics)
+│   ├── models/       # Mongoose Schemas
+│   └── public/       # Hosted Agent binaries and installers
+└── dashboard/        # React + Vite Frontend
+    ├── src/
+    │   ├── components/ # React UI Components
+    │   ├── api/        # Axios configurations
+    │   └── App.jsx     # Frontend Router
+```
+
+---
+
+## 💻 Tech Stack
+
+- **Agent**: Native C++ (Zero-dependency via `httplib.h` & `json.hpp`). Built for high efficiency and minimum footprint on Windows & Linux.
+- **Backend API**: Node.js, Express, Mongoose, Socket.IO, JWT Authentication.
 - **Frontend Dashboard**: React 19, Vite, React Router, Recharts.
 - **Database**: MongoDB caching and timeseries functionality.
 
@@ -53,9 +95,9 @@ C4Context
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js (v18 or higher)
-- MongoDB (Running locally on `127.0.0.1:27017` or configured via Mongoose URI)
-- C++ Compiler (If building the native agent manually)
+- **Node.js** (v18 or higher)
+- **MongoDB** (Running locally on `127.0.0.1:27017` or configured via Mongoose URI)
+- **C++ Compiler** (If building the native agent manually)
 
 ### 1. Database & Backend Setup
 ```bash
@@ -67,12 +109,11 @@ npm install
 
 # Establish Environment variables
 # Create a .env file based on the provided .env.example
-# e.g., JWT_SECRET=your_secret_key | MONGO_URI=mongodb://127.0.0.1:27017/logsphere
+# e.g., JWT_SECRET=your_secret_key | MONGO_URI=mongodb://127.0.0.1:27017/logsphere | DASHBOARD_URL=http://localhost:5173
 
 # Start the Node Application Backend
-node index.js
+npm run dev
 ```
-*(If installing on a production server, we recommend using PM2 to run via the root `ecosystem.config.js`).*
 
 ### 2. Frontend Dashboard Setup
 ```bash
@@ -86,12 +127,12 @@ npm install
 npm run dev
 ```
 
-> **Note**: Access the dashboard locally at `http://localhost:5173`. Upon your first visit, you will need to register an admin account to log in.
+> **Note**: Access the dashboard locally at `http://localhost:5173`. Upon your first visit, you will need to register an `Admin` account. Subsequent users can register as `Client` and provide the Admin's email to link their accounts.
 
 ### 3. Agent Integration
 To connect an actual machine to your dashboard, you can deploy the native C++ agent over your network without compiling code on the target machine.
 
-1. Generate a `systemId` and `systemKey` from inside your Dashboard UI.
+1. Generate a `systemId` and `systemKey` from inside your Dashboard UI (Devices tab).
 2. Follow the deployment path for your target operating system:
 
 **Over-The-Air (OTA) Linux Install**
