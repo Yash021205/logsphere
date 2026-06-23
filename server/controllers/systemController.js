@@ -57,8 +57,23 @@ const getSystems = async (req, res) => {
       return res.status(403).send("Forbidden");
     }
 
-    const systems = await System.find(req.systemFilter).distinct("systemId");
-    res.json(systems);
+    // Return system details with labels (hostname + owner) for the dropdown
+    const Device = require("../models/device");
+    const User = require("../models/userModel");
+    
+    const filter = req.systemFilter;
+    const systemIds = await System.find(filter).distinct("systemId");
+    
+    // Build labeled list
+    const labeled = await Promise.all(systemIds.map(async (sysId) => {
+      const device = await Device.findOne({ systemId: sysId }).select("hostname ownerEmail");
+      const label = device 
+        ? `${device.hostname} (${device.ownerEmail || "you"})`
+        : sysId;
+      return { systemId: sysId, label };
+    }));
+
+    res.json(labeled);
   } catch (err) {
     console.error(err);
     res.status(500).send("Failed to fetch systems");

@@ -34,8 +34,9 @@ function StatCard({ title, value, sub, color, icon, glow }) {
 
 export default function StatusCards({ host, systemId }) {
   const [stats, setStats] = useState({ cpu: 0, memory: 0, processes: 0 });
+  const [agentOnline, setAgentOnline] = useState(true);
 
-  const fetch = () => {
+  const fetchStats = () => {
     const q = `${host ? `&host=${host}` : ""}${systemId ? `&systemId=${systemId}` : ""}`;
     const token = localStorage.getItem("token");
     const cfg = { headers: { Authorization: `Bearer ${token}` } };
@@ -51,19 +52,69 @@ export default function StatusCards({ host, systemId }) {
     });
   };
 
-  useEffect(() => { fetch(); const t = setInterval(fetch, 5000); return () => clearInterval(t); }, [host, systemId]);
+  const checkAgentStatus = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(
+        `/api/devices/all`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const devices = res.data.devices || [];
+      const now = Date.now();
+      
+      // Filter to only the device matching the selected systemId
+      const relevantDevices = systemId 
+        ? devices.filter(d => d.systemId === systemId)
+        : devices;
+      
+      // Consider agent online only if at least one relevant device is active and seen recently
+      const hasOnline = relevantDevices.some(d => {
+        if (d.status !== "active") return false;
+        if (!d.lastSeen) return false;
+        return (now - new Date(d.lastSeen)) / 1000 < 60;
+      });
+      setAgentOnline(relevantDevices.length === 0 ? true : hasOnline);
+    } catch {
+      // If we can't check, assume online to avoid false alarms
+    }
+  };
 
-  const status = stats.cpu > 80 || stats.memory > 75 ? "CRITICAL"
-               : stats.cpu > 60 || stats.memory > 60 ? "WARNING" : "HEALTHY";
+  useEffect(() => {
+    fetchStats();
+    checkAgentStatus();
+    const t = setInterval(fetchStats, 5000);
+    const t2 = setInterval(checkAgentStatus, 15000);
+    return () => { clearInterval(t); clearInterval(t2); };
+  }, [host, systemId]);
 
-  const statusColor = status === "CRITICAL" ? "var(--err)" : status === "WARNING" ? "var(--warn)" : "var(--ok)";
+  // Determine system status — agent offline takes priority
+  let status, statusColor, statusIcon;
+  if (!agentOnline) {
+    status = "OFFLINE";
+    statusColor = "#6b7280";
+    statusIcon = "⛔";
+  } else if (stats.cpu > 80 || stats.memory > 75) {
+    status = "CRITICAL";
+    statusColor = "var(--err)";
+    statusIcon = "🚨";
+  } else if (stats.cpu > 60 || stats.memory > 60) {
+    status = "WARNING";
+    statusColor = "var(--warn)";
+    statusIcon = "⚠️";
+  } else {
+    status = "HEALTHY";
+    statusColor = "var(--ok)";
+    statusIcon = "✅";
+  }
+
+  const statusSub = !agentOnline ? "agent stopped" : "threshold check";
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "18px", marginBottom: "24px" }}>
-      <StatCard title="CPU Usage"     value={`${stats.cpu}%`}      sub="current utilisation"  color="#ef4444" icon="🖥️" />
-      <StatCard title="Memory Usage"  value={`${stats.memory}%`}   sub="RAM consumed"         color="#06b6d4" icon="💾" />
-      <StatCard title="Processes"     value={stats.processes}      sub="running processes"    color="#a855f7" icon="⚙️" />
-      <StatCard title="System Status" value={status}               sub={`threshold check`}    color={statusColor} icon={status === "CRITICAL" ? "🚨" : status === "WARNING" ? "⚠️" : "✅"} />
+      <StatCard title="CPU Usage"     value={agentOnline ? `${parseFloat(stats.cpu).toFixed(1)}%` : "—"}      sub={agentOnline ? "current utilisation" : "no live data"}  color={agentOnline ? "#ef4444" : "#6b7280"} icon="🖥️" />
+      <StatCard title="Memory Usage"  value={agentOnline ? `${parseFloat(stats.memory).toFixed(1)}%` : "—"}   sub={agentOnline ? "RAM consumed" : "no live data"}         color={agentOnline ? "#06b6d4" : "#6b7280"} icon="💾" />
+      <StatCard title="Processes"     value={agentOnline ? stats.processes : "—"}      sub={agentOnline ? "running processes" : "no live data"}    color={agentOnline ? "#a855f7" : "#6b7280"} icon="⚙️" />
+      <StatCard title="System Status" value={status}               sub={statusSub}            color={statusColor} icon={statusIcon} />
     </div>
   );
 }

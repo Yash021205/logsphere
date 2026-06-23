@@ -22,6 +22,7 @@ import SLABanner        from "./components/SLABanner";
 import TimeRangeSelector from "./components/TimeRangeSelector";
 import PendingDevices   from "./components/PendingDevices";
 import DeviceStatus     from "./components/DeviceStatus";
+import AgentOfflineBanner from "./components/AgentOfflineBanner";
 import AlertRulesPanel  from "./components/AlertRulesPanel";
 import ToastContainer   from "./components/Toast";
 import useToast         from "./hooks/useToast";
@@ -222,9 +223,10 @@ function Dashboard() {
           {activeSection === "overview" && (
             !systemHasHosts ? <EmptyState /> : (
               <div className="anim-fade">
+                <AgentOfflineBanner systemId={selectedSystem} />
                 <AlertStrip />
                 <StatusCards host={selectedHost} systemId={selectedSystem} />
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: "20px", marginBottom: "20px" }}>
+                <div className="overview-grid">
                   <HealthCard   systemId={selectedSystem} />
                   <TrendPanel   systemId={selectedSystem} />
                   <HistoryPanel systemId={selectedSystem} />

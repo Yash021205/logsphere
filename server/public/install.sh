@@ -21,14 +21,14 @@ mkdir -p $INSTALL_DIR
 curl -sLo $AGENT_BIN "$INGEST_URL/binaries/logsphere-agent-linux"
 chmod +x $AGENT_BIN
 
-# Write minimal config — no credentials
+# Write minimal config â€” no credentials
 cat <<EOF > $INSTALL_DIR/config.json
 {
   "ingestUrl": "$INGEST_URL"
 }
 EOF
 
-# Systemd service — no credential env vars needed anymore
+# Systemd service â€” no credential env vars needed anymore
 cat <<EOF > /etc/systemd/system/logsphere-agent.service
 [Unit]
 Description=LogSphere Telemetry Agent

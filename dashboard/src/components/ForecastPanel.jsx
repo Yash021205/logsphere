@@ -19,6 +19,19 @@ export default function ForecastPanel({ systemId }) {
 
   if (!forecast) return null;
 
+  // Handle empty data (not enough telemetry to predict)
+  if (!forecast.cpuPrediction && !forecast.memPrediction) {
+    return (
+      <div style={{ background: "linear-gradient(135deg,rgba(168,85,247,.06),rgba(124,58,237,.03))", border: "1px solid rgba(168,85,247,.15)", borderRadius: "var(--r-lg)", padding: "24px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "18px" }}>
+          <span style={{ fontSize: "1.1rem" }}>🔮</span>
+          <p style={{ fontSize: ".75rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".08em" }}>Load Forecast</p>
+        </div>
+        <p style={{ color: "var(--muted)", fontSize: ".85rem" }}>Not enough data yet — forecasts appear after a few minutes of monitoring.</p>
+      </div>
+    );
+  }
+
   const items = [
     { label: "CPU hits 90%",    value: forecast.cpuPrediction,    color: "#ef4444", icon: "🖥️" },
     { label: "Memory hits 90%", value: forecast.memPrediction, color: "#06b6d4", icon: "💾" },

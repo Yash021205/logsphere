@@ -24,6 +24,16 @@ export default function TrendPanel({ systemId }) {
 
   if (!trend) return null;
 
+  // Handle empty data (no telemetry or not enough data points)
+  if (!trend.cpuAvg && !trend.memAvg) {
+    return (
+      <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-lg)", padding: "24px" }}>
+        <p style={{ fontSize: ".75rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: "16px" }}>System Trends</p>
+        <p style={{ color: "var(--muted)", fontSize: ".85rem" }}>Not enough data yet — trends appear after a few minutes of monitoring.</p>
+      </div>
+    );
+  }
+
   const rows = [
     { label: "CPU Average",    value: `${trend.cpuAvg}%`, trend: trend.cpuTrend, color: "#ef4444" },
     { label: "Memory Average", value: `${trend.memAvg}%`, trend: trend.memTrend, color: "#06b6d4" },

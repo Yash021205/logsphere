@@ -40,13 +40,14 @@ function LogTable({ host, systemId }) {
       if (systemId && msg.systemId !== systemId) return;
 
       if (msg.logs && msg.logs.length > 0) {
-        const newLogs = msg.logs.map(l => ({
+        // Only take the first 10 logs per batch to prevent flooding
+        const newLogs = msg.logs.slice(0, 10).map(l => ({
           time:    msg.timestamp,
           host:    msg.host,
           message: l.message || l,
           count:   l.count || 1
         }));
-        setLogs(prev => [...newLogs, ...prev].slice(0, 200));
+        setLogs(prev => [...newLogs, ...prev].slice(0, 150));
       }
     };
 

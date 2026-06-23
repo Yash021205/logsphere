@@ -59,6 +59,25 @@ export default function AgentSetup() {
           ))}
         </div>
 
+        {/* Admin mode warning for Windows */}
+        {activeOS === 'windows' && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '12px 16px',
+            marginBottom: '16px',
+            background: 'rgba(245, 158, 11, 0.08)',
+            border: '1px solid rgba(245, 158, 11, 0.3)',
+            borderRadius: '8px',
+          }}>
+            <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>🛡️</span>
+            <p style={{ color: '#fbbf24', fontSize: '0.85rem', margin: 0, lineHeight: '1.5' }}>
+              <b>Important:</b> Open PowerShell as <b>Administrator</b> (right-click → "Run as Administrator") before running the command below.
+            </p>
+          </div>
+        )}
+
         {/* Command Display */}
         <div style={{ position: 'relative' }}>
           <div style={{

@@ -13,7 +13,7 @@ export default function SystemSelector({ selectedSystem, setSelectedSystem }) {
   }, []);
 
   useEffect(() => {
-    if (systems.length > 0 && !selectedSystem) setSelectedSystem(systems[0]);
+    if (systems.length > 0 && !selectedSystem) setSelectedSystem(systems[0].systemId);
   }, [systems, selectedSystem, setSelectedSystem]);
 
   useEffect(() => {
@@ -28,7 +28,9 @@ export default function SystemSelector({ selectedSystem, setSelectedSystem }) {
         value={selectedSystem}
         onChange={e => setSelectedSystem(e.target.value)}
       >
-        {systems.map((s, i) => <option key={i} value={s}>{s}</option>)}
+        {systems.map((s, i) => (
+          <option key={i} value={s.systemId}>{s.label}</option>
+        ))}
       </select>
     </div>
   );

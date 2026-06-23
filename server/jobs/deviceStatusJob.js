@@ -2,25 +2,49 @@
 //
 // Runs every minute.
 // Marks devices offline if lastSeen > 2 minutes ago.
-// Marks devices active if they were offline but are sending again.
+// Emits socket event so dashboard updates in real-time.
 
 const Device = require("../models/device");
+
+let _io = null;
+
+const setIo = (io) => { _io = io; };
 
 const checkDeviceStatus = async () => {
   try {
     const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
 
-    // Mark active devices as offline if not seen recently
-    const wentOffline = await Device.updateMany(
-      {
-        status: "active",
-        lastSeen: { $lt: twoMinutesAgo }
-      },
-      { $set: { status: "offline" } }
-    );
+    // Find devices about to go offline (so we can emit events with details)
+    const goingOffline = await Device.find({
+      status: "active",
+      lastSeen: { $lt: twoMinutesAgo }
+    });
 
-    if (wentOffline.modifiedCount > 0) {
-      console.log(`[DeviceStatus] Marked ${wentOffline.modifiedCount} device(s) as offline`);
+    if (goingOffline.length > 0) {
+      // Mark active devices as offline if not seen recently
+      await Device.updateMany(
+        {
+          status: "active",
+          lastSeen: { $lt: twoMinutesAgo }
+        },
+        { $set: { status: "offline" } }
+      );
+
+      console.log(`[DeviceStatus] Marked ${goingOffline.length} device(s) as offline`);
+
+      // Emit socket event for each device that went offline
+      if (_io) {
+        for (const device of goingOffline) {
+          if (device.systemId) {
+            _io.to(device.systemId).emit("device-status", {
+              deviceId: device._id,
+              hostname: device.hostname,
+              status: "offline",
+              systemId: device.systemId
+            });
+          }
+        }
+      }
     }
 
   } catch (err) {
@@ -28,4 +52,4 @@ const checkDeviceStatus = async () => {
   }
 };
 
-module.exports = { checkDeviceStatus };
+module.exports = { checkDeviceStatus, setIo };

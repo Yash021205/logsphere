@@ -223,7 +223,7 @@ router.get("/all", authMiddleware, async (req, res) => {
     }
 
     const devices = await Device.find(query)
-      .select("_id hostname platform status lastSeen agentVersion")
+      .select("_id hostname platform status lastSeen agentVersion systemId")
       .sort({ lastSeen: -1 });
 
     return res.json({ devices });

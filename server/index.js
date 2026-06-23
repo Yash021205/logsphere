@@ -20,9 +20,9 @@ const app = express();
 
 const allowedOrigins = process.env.CORS_ORIGIN || "*";
 app.use(cors({ origin: allowedOrigins, credentials: true }));
-const { checkDeviceStatus } = require("./jobs/deviceStatusJob");
+const { checkDeviceStatus, setIo: setDeviceStatusIo } = require("./jobs/deviceStatusJob");
 setInterval(checkDeviceStatus, 60 * 1000); // every minute
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 // Serve static OTA deployment binaries & installation scripts
 app.use(express.static("public"));
 app.use("/", anomalyRoutes);
@@ -89,6 +89,7 @@ io.on("connection", (socket) => {
 });
 
 app.set("io", io);
+setDeviceStatusIo(io);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {

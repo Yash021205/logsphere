@@ -557,6 +557,15 @@ int main() {
 #ifndef _WIN32
     std::string logFilePath = "/var/log/syslog";
     if (getenv("LOG_FILE_PATH")) logFilePath = getenv("LOG_FILE_PATH");
+    
+    // Skip to end of log file on first run to avoid sending entire history
+    {
+        std::ifstream f(logFilePath, std::ios::ate);
+        if (f.is_open()) {
+            lastPos = f.tellg();
+            std::cout << "[Agent] Skipping to end of " << logFilePath << " (pos " << lastPos << ")\n";
+        }
+    }
 #endif
 
     httplib::Client cli(ingestUrl.c_str());

@@ -24,10 +24,21 @@ const ingestTelemetry = async (req, res) => {
     }
     
     // Mark device as active and update lastSeen on every ingest
-    await Device.findOneAndUpdate(
+    const device = await Device.findOneAndUpdate(
       { systemId: data.systemId },
-      { $set: { status: "active", lastSeen: new Date() } }
+      { $set: { status: "active", lastSeen: new Date() } },
+      { new: true }
     );
+
+    // If device was offline/claimed, notify dashboard it's back online
+    if (device && io) {
+      io.to(data.systemId).emit("device-status", {
+        deviceId: device._id,
+        hostname: device.hostname,
+        status: "active",
+        systemId: data.systemId
+      });
+    }
     
     // Normalize timestamp to milliseconds (Unix timestamps in seconds are <= 10 digits)
     let timestamp = data.timestamp || Date.now();

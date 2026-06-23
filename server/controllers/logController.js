@@ -10,12 +10,15 @@ const getLogs = async (req, res) => {
 
     const data = await Telemetry.find(query)
       .sort({ timestamp: -1 })
-      .limit(50);
+      .limit(20)
+      .select("timestamp host logs");
+      
     const logs = [];
 
     data.forEach(entry => {
       if (entry.logs && entry.logs.length > 0) {
         entry.logs.forEach(log => {
+          if (logs.length >= 100) return; // cap at 100 total logs
           logs.push({
             time: entry.timestamp,
             host: entry.host,
