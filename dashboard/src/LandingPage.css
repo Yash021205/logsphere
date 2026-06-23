@@ -281,55 +281,59 @@
   .lp-nav-actions .btn-primary { padding: 7px 14px; font-size: .82rem; }
 }
 
-/* Auth page */
+/* ── Auth page — single centered card ───────────────────────── */
 .auth-wrap {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
   overflow: hidden;
+  padding: 20px;
 }
-.auth-left {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 60px;
-  background: linear-gradient(135deg,rgba(124,58,237,.08),rgba(6,182,212,.04));
-  border-right: 1px solid var(--border);
+
+/* The single centered card */
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(139,92,246,.2);
+  border-radius: 24px;
+  padding: 48px 44px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.5), 0 0 48px rgba(124,58,237,.1);
+  backdrop-filter: blur(16px);
   position: relative;
   z-index: 5;
+  text-align: center;
 }
-.auth-right {
-  width: 480px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 60px 50px;
-  position: relative;
-  z-index: 5;
+
+/* Big logo */
+.auth-logo {
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: -.04em;
+  display: block;
+  margin-bottom: 28px;
 }
-.auth-logo { font-size:2rem; font-weight:700; margin-bottom:40px; letter-spacing:-.03em; }
-.auth-tagline { font-size:1.6rem; font-weight:700; line-height:1.3; color:var(--text); margin-bottom:16px; }
-.auth-sub { font-size:.95rem; color:var(--muted); line-height:1.7; margin-bottom:40px; max-width:380px; }
-.auth-bullets { display:flex; flex-direction:column; gap:14px; }
-.auth-bullet {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+
+/* Title — Welcome back / Create account */
+.auth-card-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -.02em;
+  margin-bottom: 6px;
+}
+
+/* Subtitle */
+.auth-card-sub {
   font-size: .9rem;
-  color: var(--text-2);
+  color: var(--muted);
+  margin-bottom: 28px;
+  line-height: 1.6;
 }
-.auth-bullet-icon {
-  width: 32px; height: 32px;
-  background: rgba(124,58,237,.15);
-  border: 1px solid rgba(124,58,237,.25);
-  border-radius: var(--r-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: .9rem;
-  flex-shrink: 0;
-}
+
+/* Tabs */
 .auth-tabs {
   display: flex;
   gap: 0;
@@ -337,7 +341,7 @@
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   padding: 4px;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 .auth-tab {
   flex: 1;
@@ -356,14 +360,15 @@
   background: linear-gradient(135deg,#7c3aed,#a855f7);
   color: white;
   font-weight: 600;
+  box-shadow: 0 4px 15px rgba(124,58,237,.35);
 }
 
-@media (max-width: 900px) {
-  .auth-left { display:none; }
-  .auth-right { width:100%; padding:40px 32px; }
-}
-
+/* Mobile */
 @media (max-width: 480px) {
-  .auth-right { padding: 32px 20px; }
+  .auth-card { padding: 36px 24px; border-radius: 18px; }
+  .auth-logo { font-size: 1.9rem; }
 }
+
+
+
 

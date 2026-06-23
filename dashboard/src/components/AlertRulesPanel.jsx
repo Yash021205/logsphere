@@ -51,9 +51,8 @@ export default function AlertRulesPanel({ systemId }) {
   const [saved,   setSaved]   = useState(false);
   const [error,   setError]   = useState(null);
 
-  // Load current rules
+  // Load current rules on mount (works with or without an explicit systemId)
   useEffect(() => {
-    if (!systemId) return;
     const token = localStorage.getItem("token");
     axios
       .get(`/alert-rules${systemId ? `?systemId=${systemId}` : ""}`, {
@@ -74,7 +73,7 @@ export default function AlertRulesPanel({ systemId }) {
       setSaving(true);
       setError(null);
       const token = localStorage.getItem("token");
-      await axios.put(
+      await axios.post(
         `/alert-rules${systemId ? `?systemId=${systemId}` : ""}`,
         { cpuThreshold, memoryThreshold },
         { headers: { Authorization: `Bearer ${token}` } }

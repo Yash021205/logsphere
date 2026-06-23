@@ -2,7 +2,7 @@ param (
     [string]$ingestUrl = "https://api.logsphere.com"
 )
 
-# ── Directories ───────────────────────────────────────────────────
+# -- Directories ---------------------------------------------------
 # Exe in ProgramFiles (read-only to non-admins; safe from tampering)
 # Config in ProgramData  (machine-wide; accessible by SYSTEM account)
 $BinDir     = "$env:ProgramFiles\LogSphere"
@@ -11,20 +11,18 @@ $AgentExe   = "$BinDir\logsphere-agent.exe"
 $ConfigFile = "$ConfigDir\config.json"
 $TaskName   = "LogSphereAgent"
 
-# ── Require elevation ─────────────────────────────────────────────
-if (-not ([Security.Principal.WindowsPrincipal] `
-          [Security.Principal.WindowsIdentity]::GetCurrent()
-         ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+# -- Require elevation ---------------------------------------------
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Error "This script must be run as Administrator."
     exit 1
 }
 
 Write-Host ""
 Write-Host "  LogSphere Agent Installer" -ForegroundColor Cyan
-Write-Host "  ─────────────────────────"
+Write-Host "  -------------------------"
 Write-Host ""
 
-# ── Create directories ────────────────────────────────────────────
+# -- Create directories --------------------------------------------
 foreach ($dir in @($BinDir, $ConfigDir)) {
     if (-not (Test-Path $dir)) {
         New-Item -ItemType Directory -Path $dir | Out-Null
@@ -32,32 +30,35 @@ foreach ($dir in @($BinDir, $ConfigDir)) {
     }
 }
 
-# ── Protect config directory ──────────────────────────────────────
+# -- Protect config directory --------------------------------------
 # Only SYSTEM and Administrators can read/write.
 # Regular users cannot access credentials.
-icacls $ConfigDir /inheritance:r `
-    /grant "SYSTEM:(OI)(CI)F" `
-    /grant "Administrators:(OI)(CI)F" | Out-Null
+$Acl = Get-Acl $ConfigDir
+$Acl.SetAccessRuleProtection($true, $false)
+$SystemRule = New-Object System.Security.AccessControl.FileSystemAccessRule("SYSTEM", "FullControl", "ContainerInherit, ObjectInherit", "None", "Allow")
+$AdminRule  = New-Object System.Security.AccessControl.FileSystemAccessRule("Administrators", "FullControl", "ContainerInherit, ObjectInherit", "None", "Allow")
+$Acl.AddAccessRule($SystemRule)
+$Acl.AddAccessRule($AdminRule)
+Set-Acl $ConfigDir $Acl
 Write-Host "  [+] Config directory permissions locked down"
 
-# ── Download binary ───────────────────────────────────────────────
+# -- Download binary -----------------------------------------------
 Write-Host "  [~] Downloading agent binary..."
 try {
-    Invoke-WebRequest -Uri "$ingestUrl/binaries/logsphere-agent-windows.exe" `
-                      -OutFile $AgentExe -UseBasicParsing
+    Invoke-WebRequest -Uri "$ingestUrl/binaries/logsphere-agent-windows.exe" -OutFile $AgentExe -UseBasicParsing
     Write-Host "  [+] Binary saved to $AgentExe"
 } catch {
     Write-Error "  [!] Failed to download agent: $_"
     exit 1
 }
 
-# ── Write minimal config ──────────────────────────────────────────
+# -- Write minimal config ------------------------------------------
 # No credentials here — agent self-provisions on first run.
 $config = @{ ingestUrl = $ingestUrl } | ConvertTo-Json
 Set-Content -Path $ConfigFile -Value $config
 Write-Host "  [+] Config written to $ConfigFile"
 
-# ── Register as a Windows Scheduled Task ─────────────────────────
+# -- Register as a Windows Scheduled Task -------------------------
 # Runs as SYSTEM at every system startup; restarts up to 3× on failure.
 # Does NOT require the agent to implement the Windows Service protocol.
 Write-Host "  [~] Registering startup task..."
@@ -69,45 +70,29 @@ if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
     Write-Host "  [~] Removed previous task"
 }
 
-$action    = New-ScheduledTaskAction `
-                 -Execute $AgentExe `
-                 -WorkingDirectory $ConfigDir   # agent reads config from WorkingDir
+$action    = New-ScheduledTaskAction -Execute $AgentExe -WorkingDirectory $ConfigDir   # agent reads config from WorkingDir
 
 $trigger   = New-ScheduledTaskTrigger -AtStartup
 
-$settings  = New-ScheduledTaskSettingsSet `
-                 -RestartCount 3 `
-                 -RestartInterval (New-TimeSpan -Minutes 1) `
-                 -StartWhenAvailable $true `
-                 -ExecutionTimeLimit ([TimeSpan]::Zero)   # no timeout
+$settings  = New-ScheduledTaskSettingsSet -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero)   # no timeout
 
-$principal = New-ScheduledTaskPrincipal `
-                 -UserID "SYSTEM" `
-                 -LogonType ServiceAccount `
-                 -RunLevel Highest
+$principal = New-ScheduledTaskPrincipal -UserID "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 
-Register-ScheduledTask `
-    -TaskName   $TaskName `
-    -Action     $action `
-    -Trigger    $trigger `
-    -Settings   $settings `
-    -Principal  $principal `
-    -Description "LogSphere telemetry agent — monitors CPU, memory and Windows Event Log" `
-    -Force | Out-Null
+Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description "LogSphere telemetry agent - monitors CPU, memory and Windows Event Log" -Force | Out-Null
 
 Write-Host "  [+] Startup task registered (runs as SYSTEM, auto-restarts)"
 
-# ── Start immediately ─────────────────────────────────────────────
+# -- Start immediately ---------------------------------------------
 Write-Host "  [~] Starting agent..."
 Start-ScheduledTask -TaskName $TaskName
 Write-Host "  [+] Agent is running!"
 
 Write-Host ""
-Write-Host "  ✓ Installation complete." -ForegroundColor Green
+Write-Host "  > Installation complete." -ForegroundColor Green
 Write-Host ""
 Write-Host "  Next step: log into your LogSphere dashboard and click"
-Write-Host "  [Claim Device] — your machine will appear automatically."
+Write-Host "  [Claim Device] - your machine will appear automatically."
 Write-Host ""
-Write-Host "  To stop the agent:    Stop-ScheduledTask  -TaskName $TaskName"
-Write-Host "  To uninstall:         Unregister-ScheduledTask -TaskName $TaskName -Confirm:`$false"
+Write-Host ('  To stop the agent:    Stop-ScheduledTask  -TaskName ' + $TaskName)
+Write-Host ('  To uninstall:         Unregister-ScheduledTask -TaskName ' + $TaskName + ' -Confirm:$false')
 Write-Host ""

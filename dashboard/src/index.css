@@ -280,6 +280,26 @@ select.ls-select option { background:#0c0c24; color:var(--text); }
 .anim-fade-up { animation: fadeInUp .5s ease both; }
 .anim-fade    { animation: fadeIn   .4s ease both; }
 
+/* ── Overview 4-card grid — always symmetric (1 / 2×2 / 1×4) ── */
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);   /* default: 2×2, symmetric */
+  gap: 20px;
+  margin-bottom: 20px;
+}
+/* Large monitor — all 4 in one row */
+@media (min-width: 1600px) {
+  .overview-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+/* Mobile — single column */
+@media (max-width: 768px) {
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── Hamburger button (mobile only) ─────────────────────────── */
 .hamburger {
   display: none;
