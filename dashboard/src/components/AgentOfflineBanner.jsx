@@ -26,6 +26,13 @@ export default function AgentOfflineBanner({ systemId }) {
           ? devices.filter(d => d.systemId === systemId)
           : devices;
 
+        // If no device records exist for this system, don't show offline banner
+        // (system may predate the device provisioning feature)
+        if (relevant.length === 0) {
+          setOfflineDevices([]);
+          return;
+        }
+
         // A device is "offline" if status !== "active"
         // OR if lastSeen was more than 30 seconds ago
         const now = Date.now();

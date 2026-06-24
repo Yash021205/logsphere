@@ -55,10 +55,10 @@ export default function StatusCards({ host, systemId }) {
   const checkAgentStatus = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(
-        `/api/devices/all`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const cfg = { headers: { Authorization: `Bearer ${token}` } };
+      
+      // First check device records
+      const res = await axios.get(`/api/devices/all`, cfg);
       const devices = res.data.devices || [];
       const now = Date.now();
       
@@ -67,13 +67,33 @@ export default function StatusCards({ host, systemId }) {
         ? devices.filter(d => d.systemId === systemId)
         : devices;
       
-      // Consider agent online only if at least one relevant device is active and seen recently
-      const hasOnline = relevantDevices.some(d => {
+      // Check if any device is active and seen recently
+      const hasOnlineDevice = relevantDevices.some(d => {
         if (d.status !== "active") return false;
         if (!d.lastSeen) return false;
         return (now - new Date(d.lastSeen)) / 1000 < 60;
       });
-      setAgentOnline(relevantDevices.length === 0 ? true : hasOnline);
+      
+      if (hasOnlineDevice) {
+        setAgentOnline(true);
+        return;
+      }
+      
+      // Fallback: if no device record found but metrics are flowing, agent is online
+      // (handles case where device was set up before device provisioning system)
+      if (relevantDevices.length === 0) {
+        const q = systemId ? `&systemId=${systemId}` : "";
+        const metricsRes = await axios.get(`/metrics/cpu?last=1${q}`, cfg);
+        if (metricsRes.data.length > 0) {
+          const lastMetricTime = new Date(metricsRes.data[metricsRes.data.length - 1].time).getTime();
+          if ((now - lastMetricTime) / 1000 < 30) {
+            setAgentOnline(true);
+            return;
+          }
+        }
+      }
+      
+      setAgentOnline(relevantDevices.length === 0 ? true : false);
     } catch {
       // If we can't check, assume online to avoid false alarms
     }

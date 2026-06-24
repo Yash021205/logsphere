@@ -3,12 +3,9 @@ param (
 )
 
 # -- Directories ---------------------------------------------------
-# Exe in ProgramFiles (read-only to non-admins; safe from tampering)
-# Config in ProgramData  (machine-wide; accessible by SYSTEM account)
-$BinDir     = "$env:ProgramFiles\LogSphere"
-$ConfigDir  = "$env:ProgramData\LogSphere"
-$AgentExe   = "$BinDir\logsphere-agent.exe"
-$ConfigFile = "$ConfigDir\config.json"
+$InstallDir = "$env:ProgramData\LogSphere"
+$AgentExe   = "$InstallDir\logsphere-agent.exe"
+$ConfigFile = "$InstallDir\config.json"
 $TaskName   = "LogSphereAgent"
 
 # -- Require elevation ---------------------------------------------
@@ -22,25 +19,11 @@ Write-Host "  LogSphere Agent Installer" -ForegroundColor Cyan
 Write-Host "  -------------------------"
 Write-Host ""
 
-# -- Create directories --------------------------------------------
-foreach ($dir in @($BinDir, $ConfigDir)) {
-    if (-not (Test-Path $dir)) {
-        New-Item -ItemType Directory -Path $dir | Out-Null
-        Write-Host "  [+] Created $dir"
-    }
+# -- Create directory ----------------------------------------------
+if (-not (Test-Path $InstallDir)) {
+    New-Item -ItemType Directory -Path $InstallDir | Out-Null
+    Write-Host "  [+] Created $InstallDir"
 }
-
-# -- Protect config directory --------------------------------------
-# Only SYSTEM and Administrators can read/write.
-# Regular users cannot access credentials.
-$Acl = Get-Acl $ConfigDir
-$Acl.SetAccessRuleProtection($true, $false)
-$SystemRule = New-Object System.Security.AccessControl.FileSystemAccessRule("SYSTEM", "FullControl", "ContainerInherit, ObjectInherit", "None", "Allow")
-$AdminRule  = New-Object System.Security.AccessControl.FileSystemAccessRule("Administrators", "FullControl", "ContainerInherit, ObjectInherit", "None", "Allow")
-$Acl.AddAccessRule($SystemRule)
-$Acl.AddAccessRule($AdminRule)
-Set-Acl $ConfigDir $Acl
-Write-Host "  [+] Config directory permissions locked down"
 
 # -- Download binary -----------------------------------------------
 Write-Host "  [~] Downloading agent binary..."
@@ -54,13 +37,15 @@ try {
 
 # -- Write minimal config ------------------------------------------
 # No credentials here — agent self-provisions on first run.
-$config = @{ ingestUrl = $ingestUrl } | ConvertTo-Json
-Set-Content -Path $ConfigFile -Value $config
-Write-Host "  [+] Config written to $ConfigFile"
+if (-not (Test-Path $ConfigFile)) {
+    $config = @{ ingestUrl = $ingestUrl } | ConvertTo-Json
+    Set-Content -Path $ConfigFile -Value $config
+    Write-Host "  [+] Config written to $ConfigFile"
+} else {
+    Write-Host "  [~] Config already exists, keeping existing credentials"
+}
 
 # -- Register as a Windows Scheduled Task -------------------------
-# Runs as SYSTEM at every system startup; restarts up to 3× on failure.
-# Does NOT require the agent to implement the Windows Service protocol.
 Write-Host "  [~] Registering startup task..."
 
 # Remove existing task if present (allows reinstall/upgrade)
@@ -70,22 +55,27 @@ if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
     Write-Host "  [~] Removed previous task"
 }
 
-$action    = New-ScheduledTaskAction -Execute $AgentExe -WorkingDirectory $ConfigDir   # agent reads config from WorkingDir
-
+$action    = New-ScheduledTaskAction -Execute $AgentExe -WorkingDirectory $InstallDir
 $trigger   = New-ScheduledTaskTrigger -AtStartup
-
-$settings  = New-ScheduledTaskSettingsSet -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero)   # no timeout
-
+$settings  = New-ScheduledTaskSettingsSet -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 $principal = New-ScheduledTaskPrincipal -UserID "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 
-Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description "LogSphere telemetry agent - monitors CPU, memory and Windows Event Log" -Force | Out-Null
+Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description "LogSphere telemetry agent" -Force | Out-Null
 
 Write-Host "  [+] Startup task registered (runs as SYSTEM, auto-restarts)"
 
 # -- Start immediately ---------------------------------------------
 Write-Host "  [~] Starting agent..."
 Start-ScheduledTask -TaskName $TaskName
-Write-Host "  [+] Agent is running!"
+Start-Sleep -Seconds 2
+
+$proc = Get-Process logsphere-agent -ErrorAction SilentlyContinue
+if ($proc) {
+    Write-Host "  [+] Agent is running! (PID: $($proc.Id))" -ForegroundColor Green
+} else {
+    Write-Host "  [!] Agent may not have started. Try running manually:" -ForegroundColor Yellow
+    Write-Host "      & `"$AgentExe`""
+}
 
 Write-Host ""
 Write-Host "  > Installation complete." -ForegroundColor Green
@@ -93,6 +83,7 @@ Write-Host ""
 Write-Host "  Next step: log into your LogSphere dashboard and click"
 Write-Host "  [Claim Device] - your machine will appear automatically."
 Write-Host ""
-Write-Host ('  To stop the agent:    Stop-ScheduledTask  -TaskName ' + $TaskName)
-Write-Host ('  To uninstall:         Unregister-ScheduledTask -TaskName ' + $TaskName + ' -Confirm:$false')
+Write-Host "  To stop:      Stop-ScheduledTask -TaskName $TaskName"
+Write-Host "  To start:     Start-ScheduledTask -TaskName $TaskName"
+Write-Host "  To uninstall: Unregister-ScheduledTask -TaskName $TaskName -Confirm:`$false"
 Write-Host ""

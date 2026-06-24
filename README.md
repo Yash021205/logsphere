@@ -1,183 +1,382 @@
 # LogSphere 🌐
 
 <p align="center">
-  <em>Real-time Multi-Platform System Monitoring, RBAC & Analytics Platform</em>
+  <strong>Real-time Infrastructure Monitoring Platform with Multi-Tenant RBAC</strong>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
-  <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
+  <img src="https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
   <img src="https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
-  <img src="https://img.shields.io/badge/C%2B%2B-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++" />
-  <img src="https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socket.io&logoColor=white" alt="Socket.IO" />
+  <img src="https://img.shields.io/badge/C++-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++" />
+  <img src="https://img.shields.io/badge/Socket.IO-010101?style=for-the-badge&logo=socket.io&logoColor=white" alt="Socket.IO" />
+  <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/license-ISC-blue" alt="License" />
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey" alt="Platform" />
 </p>
 
 ---
 
-## 📖 Overview
+## Overview
 
-LogSphere is an advanced, end-to-end telemetry platform built to provide instant insights into your entire infrastructure. It aggregates raw diagnostics (CPU usage, Memory utilization, Process Counts) alongside error logs from disparate machines into a single, unified "pane of glass" dashboard. 
+LogSphere is a full-stack telemetry platform that monitors CPU, memory, processes, and application logs across distributed infrastructure in real time. It features a native C++ agent (zero runtime dependencies), a Node.js backend with anomaly detection, and a React dashboard with live-updating charts.
 
-LogSphere features built-in **Multi-tenant RBAC (Role-Based Access Control)**, allowing Administrators to oversee entire fleets of devices while individual Clients can safely monitor only their own systems. Advanced features include **Machine Learning-based anomaly detection**, threshold-based **Alert Rules**, and real-time Socket.IO streaming.
+## Screenshots
+
+<p align="center">
+  <img src="./screenshots/landing.png" width="100%" alt="Landing Page" />
+</p>
+
+<p align="center">
+  <img src="./screenshots/overview.png" width="100%" alt="System Overview Dashboard" />
+</p>
+
+<p align="center">
+  <img src="./screenshots/metrics.png" width="100%" alt="Live Metrics - CPU & Memory Charts" />
+</p>
+
+<p align="center">
+  <img src="./screenshots/logs.png" width="100%" alt="Live Log Console with Severity Filters" />
+</p>
+
+<p align="center">
+  <img src="./screenshots/devices.png" width="100%" alt="Devices & Setup - Online/Offline Status" />
+</p>
+
+**Key highlights:**
+- One-command agent deployment (OTA install scripts for Linux & Windows)
+- Multi-tenant RBAC — Admins oversee fleets, Clients see only their own systems
+- Real-time streaming via Socket.IO (no page refreshes needed)
+- Threshold-based alert rules with anomaly detection
+- Historical comparison, trend analysis, and load forecasting
+- Device lifecycle management (auto-discover → claim → monitor → offline detection)
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
-```mermaid
-flowchart TD
-    %% Styling Classes
-    classDef actor fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff,rx:8px,ry:8px;
-    classDef ui fill:#ec4899,stroke:#be185d,stroke-width:2px,color:#fff,rx:8px,ry:8px;
-    classDef api fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff,rx:8px,ry:8px;
-    classDef db fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff,rx:8px,ry:8px;
-    classDef edge fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff,rx:8px,ry:8px;
-    classDef boundary fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px,stroke-dasharray: 5 5,color:#333;
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              USER LAYER                                          │
+│                                                                                 │
+│    ┌──────────────┐         ┌──────────────┐                                   │
+│    │  Admin User  │         │ Client User  │                                   │
+│    │ (fleet view) │         │ (own system) │                                   │
+│    └──────┬───────┘         └──────┬───────┘                                   │
+│           │       HTTPS / JWT       │                                           │
+└───────────┼─────────────────────────┼───────────────────────────────────────────┘
+            │                         │
+            ▼                         ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         DASHBOARD (React + Vite)                                 │
+│                                                                                 │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌──────────┐                │
+│  │Overview │ │ Metrics │ │  Logs   │ │ Devices │ │  Alerts  │                │
+│  │  Panel  │ │ Charts  │ │ Console │ │  Setup  │ │  Rules   │                │
+│  └─────────┘ └─────────┘ └─────────┘ └─────────┘ └──────────┘                │
+│                                                                                 │
+│  Features: Health Score • Trends • Forecast • Historical Comparison             │
+│            Offline Detection Banner • System Selector (Admin)                   │
+└──────────────────────────────────┬──────────────────────────────────────────────┘
+                                   │
+                    REST API + Socket.IO (bidirectional)
+                                   │
+┌──────────────────────────────────┼──────────────────────────────────────────────┐
+│                         SERVER (Node.js + Express)                               │
+│                                  │                                              │
+│  ┌───────────────────────────────┼───────────────────────────────────────┐      │
+│  │                               ▼                                       │      │
+│  │  ┌──────────┐  ┌──────────────────┐  ┌────────────────┐             │      │
+│  │  │   Auth   │  │  Ingest Engine   │  │  Socket.IO GW  │             │      │
+│  │  │  (JWT)   │  │  (Rate Limited)  │  │  (Room-based)  │             │      │
+│  │  └──────────┘  └────────┬─────────┘  └───────┬────────┘             │      │
+│  │                          │                    │                       │      │
+│  │  ┌──────────────────────────────────────────────────────────────┐    │      │
+│  │  │                    Processing Layer                          │    │      │
+│  │  │                                                              │    │      │
+│  │  │  • Log Classification (Error/Warning/Info)                   │    │      │
+│  │  │  • Anomaly Detection (baseline comparison)                   │    │      │
+│  │  │  • Alert Rules Engine (threshold triggers)                   │    │      │
+│  │  │  • Aggregation Jobs (5min + 1hr rollups)                     │    │      │
+│  │  │  • Device Status Job (offline detection every 60s)           │    │      │
+│  │  └──────────────────────────────────────────────────────────────┘    │      │
+│  └───────────────────────────────────────────────────────────────────────┘      │
+│                                  │                                              │
+└──────────────────────────────────┼──────────────────────────────────────────────┘
+                                   │
+                              Mongoose ORM
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                            MongoDB (Database)                                    │
+│                                                                                 │
+│  Collections: telemetry • telemetry_5min • telemetry_1hr • devices              │
+│               users • systems • hosts • alertrules                              │
+└─────────────────────────────────────────────────────────────────────────────────┘
 
-    %% Components
-    subgraph Users ["👥 User Access"]
-        Admin["👤 System Administrator<br>(Full Visibility & Alerts)"]:::actor
-        Client["👤 System Client<br>(Restricted Dashboard)"]:::actor
-    end
-
-    subgraph LogSphere ["LogSphere Core Infrastructure"]
-        Dashboard["💻 React SPA Dashboard<br>(Vite / Recharts)"]:::ui
-        
-        subgraph Backend ["Server Tier"]
-            NodeAPI["⚙️ Node.js REST API<br>(Express + ML Engine)"]:::api
-            SocketGW["🔌 WebSocket Gateway<br>(Socket.IO)"]:::api
-        end
-        
-        MongoDB[("🗄️ MongoDB Database<br>(Timeseries Metrics, Logs, RBAC)")]:::db
-    end
-
-    subgraph Agents ["🌐 Edge Telemetry (Remote Hosts)"]
-        WinAgent["🪟 Windows Host<br>(C++ Native Agent)"]:::edge
-        LinAgent["🐧 Linux Host<br>(C++ Native Agent)"]:::edge
-    end
-
-    %% Connections
-    Admin -- "HTTPS / JWT" --> Dashboard
-    Client -- "HTTPS / JWT" --> Dashboard
-
-    Dashboard <--"REST API"--> NodeAPI
-    SocketGW --"Real-time Updates"--> Dashboard
-
-    WinAgent --"HTTPS POST /ingest<br>(Metrics & Logs)"--> NodeAPI
-    LinAgent --"HTTPS POST /ingest<br>(Metrics & Logs)"--> NodeAPI
-
-    NodeAPI --"Internal Event Emitter"--> SocketGW
-    NodeAPI <--"Mongoose ORM"--> MongoDB
-
-    %% Apply boundary styles
-    class Users,LogSphere,Backend,Agents boundary;
+                                   ▲
+                                   │  HTTPS POST /ingest
+                                   │  (systemId + systemKey auth)
+                                   │
+┌──────────────────────────────────┼──────────────────────────────────────────────┐
+│                          AGENT LAYER (C++ Native)                                │
+│                                  │                                              │
+│         ┌────────────────────────┼────────────────────────┐                    │
+│         │                        │                        │                    │
+│    ┌────┴─────┐            ┌─────┴────┐            ┌─────┴────┐               │
+│    │ Windows  │            │  Linux   │            │  Linux   │               │
+│    │  Host 1  │            │  Host 2  │            │  Host N  │               │
+│    │          │            │          │            │          │               │
+│    │ • CPU %  │            │ • CPU %  │            │ • CPU %  │               │
+│    │ • RAM %  │            │ • RAM %  │            │ • RAM %  │               │
+│    │ • Procs  │            │ • Procs  │            │ • Procs  │               │
+│    │ • EvtLog │            │ • Syslog │            │ • Syslog │               │
+│    └──────────┘            └──────────┘            └──────────┘               │
+│                                                                                 │
+│    Agent Features: Auto-provisioning • Fingerprint ID • Credential polling      │
+│                    Systemd service (Linux) • Scheduled Task (Windows)           │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## ✨ Key Features & Workflow
+## Features
 
-- 🔒 **Role-Based Access Control (RBAC)**: Secure multi-tenant architecture. Admins register first, and Clients register using their Admin's email to link accounts. Admins can view metrics across all clients, while clients only see their own telemetry.
-- 🚀 **Zero-Dependency Agent Deployment**: A lightweight, native C++ agent code is built and deployed on the target machine (Windows/Linux) via OTA installation scripts. No Python or Java runtimes required!
-- 📊 **Metric Collection**: The agent samples CPU, RAM, and captures new application log files down to the millisecond.
-- 🛡️ **Secure Data Ingestion**: Polled data is sent securely to the Node.js Express Backend via the RESTful `/ingest` route using secure `systemKey` authorization.
-- 🧠 **Data Aggregation & Machine Learning**: The backend logs raw metrics to MongoDB immediately while broadcasting them to connected users. Background jobs condense metrics into historical averages, and an ML layer analyzes trends for anomaly detection.
-- 🔔 **Alert Rules Engine**: Users can define specific CPU and memory thresholds to receive real-time notifications when systems are under stress.
-- ⚡ **Real-time Visualization**: Via established Socket.IO connections, visual charts, log tables, and metric widgets update instantaneously without ever needing to reload the webpage.
+| Category | Feature | Description |
+|----------|---------|-------------|
+| **Auth** | Multi-tenant RBAC | Admin/Client roles, JWT-based auth, password reset via email |
+| **Agent** | Zero-config install | One-command OTA deployment, auto-provisioning (no manual credentials) |
+| **Agent** | Cross-platform | Native C++ for Windows (Event Log) and Linux (syslog) |
+| **Monitoring** | Real-time metrics | CPU, memory, process count streamed every 5 seconds |
+| **Monitoring** | Live log console | Classified logs (Error/Warning/Info) with search & filter |
+| **Analytics** | Trend analysis | Detects rising/falling/stable patterns in CPU & memory |
+| **Analytics** | Historical comparison | Today vs yesterday averages with % change |
+| **Analytics** | Load forecasting | Predicts time-to-threshold (90%) based on current rates |
+| **Analytics** | Health score | 0–100 composite score based on current metrics |
+| **Alerts** | Threshold rules | Configurable CPU/memory thresholds with real-time notifications |
+| **Alerts** | Anomaly detection | Baseline comparison flags spikes above 10% deviation |
+| **Devices** | Lifecycle management | Pending → Claimed → Active → Offline state machine |
+| **Devices** | Offline detection | 2-min server-side check + 30s client-side detection + socket events |
+| **Admin** | Fleet overview | System selector to switch between all managed client systems |
 
 ---
 
-## 📁 Repository Structure
+## Tech Stack
 
-```text
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| Agent | C++17, httplib.h, nlohmann/json | Lightweight telemetry collection (no runtime deps) |
+| Server | Node.js, Express 5, Mongoose | REST API, business logic, data persistence |
+| Server | Socket.IO | Bidirectional real-time communication |
+| Server | JWT, bcryptjs | Authentication and authorization |
+| Server | express-rate-limit | API rate limiting per system |
+| Database | MongoDB | Time-series metrics, logs, user/device records |
+| Dashboard | React 19, Vite 7 | SPA with hot module replacement |
+| Dashboard | Recharts | Interactive metric visualization |
+| Dashboard | socket.io-client | Real-time data streaming |
+
+---
+
+## Project Structure
+
+```
 logsphere/
-├── agent/            # C++ Native Agent for Windows/Linux
-│   ├── agent.cpp     # Cross-platform telemetry collection code
-│   └── install.ps1   # PowerShell OTA Installer
-├── server/           # Node.js Express Backend
-│   ├── index.js      # Main Express / Socket.IO entry point
-│   ├── controllers/  # API business logic (Auth, Ingest, Metrics)
-│   ├── models/       # Mongoose Schemas
-│   └── public/       # Hosted Agent binaries and installers
-└── dashboard/        # React + Vite Frontend
-    ├── src/
-    │   ├── components/ # React UI Components
-    │   ├── api/        # Axios configurations
-    │   └── App.jsx     # Frontend Router
+├── agent/                      # C++ native agent
+│   ├── agent.cpp               # Cross-platform telemetry collector
+│   ├── httplib.h               # HTTP client (header-only)
+│   ├── json.hpp                # JSON library (header-only)
+│   ├── Makefile                # Build configuration
+│   ├── install.sh              # Linux OTA installer
+│   └── install.ps1             # Windows OTA installer
+├── server/                     # Node.js backend
+│   ├── index.js                # Express + Socket.IO entry point
+│   ├── config/database.js      # MongoDB connection
+│   ├── controllers/            # Route handlers
+│   │   ├── authController.js   # Login, register, refresh, password reset
+│   │   ├── ingestController.js # Telemetry ingestion + anomaly detection
+│   │   ├── metricsController.js# CPU/memory query endpoints
+│   │   ├── logController.js    # Log retrieval
+│   │   └── ...                 # Alert, trend, history, predict, etc.
+│   ├── models/                 # Mongoose schemas
+│   │   ├── telemetryModel.js   # Raw metrics (5s granularity)
+│   │   ├── telemetry5minModel.js # 5-minute aggregates
+│   │   ├── telemetry1hrModel.js  # 1-hour aggregates
+│   │   ├── device.js           # Device lifecycle & provisioning
+│   │   └── userModel.js        # Users with RBAC
+│   ├── jobs/                   # Background workers
+│   │   ├── aggregationJob.js   # Metric rollup (5min + 1hr)
+│   │   └── deviceStatusJob.js  # Offline detection
+│   ├── middleware/             # Auth middleware (JWT + system filtering)
+│   ├── routes/                 # Express route definitions
+│   └── public/                 # Served static files
+│       ├── binaries/           # Agent binaries (Linux + Windows)
+│       ├── install.sh          # Linux installer (served via curl)
+│       └── install.ps1         # Windows installer (served via IWR)
+├── dashboard/                  # React frontend
+│   ├── src/
+│   │   ├── App.jsx             # Router + Dashboard layout
+│   │   ├── components/         # UI components (25+ modules)
+│   │   ├── hooks/              # Custom React hooks
+│   │   ├── api/axios.js        # API client configuration
+│   │   └── socket.js           # Socket.IO client
+│   └── vite.config.js          # Vite build config
+└── ecosystem.config.js         # PM2 deployment config
 ```
 
 ---
 
-## 💻 Tech Stack
-
-- **Agent**: Native C++ (Zero-dependency via `httplib.h` & `json.hpp`). Built for high efficiency and minimum footprint on Windows & Linux.
-- **Backend API**: Node.js, Express, Mongoose, Socket.IO, JWT Authentication.
-- **Frontend Dashboard**: React 19, Vite, React Router, Recharts.
-- **Database**: MongoDB caching and timeseries functionality.
-
----
-
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
-- **Node.js** (v18 or higher)
-- **MongoDB** (Running locally on `127.0.0.1:27017` or configured via Mongoose URI)
-- **C++ Compiler** (If building the native agent manually)
 
-### 1. Database & Backend Setup
+- **Node.js** v18+
+- **MongoDB** (local or Atlas URI)
+- **C++ compiler** (only if building the agent from source)
+
+### 1. Clone the repository
+
 ```bash
-# Navigate to the backend server directory
+git clone https://github.com/Yash021205/logsphere.git
+cd logsphere
+```
+
+### 2. Backend setup
+
+```bash
 cd server
-
-# Install Node dependencies
 npm install
+```
 
-# Establish Environment variables
-# Create a .env file based on the provided .env.example
-# e.g., JWT_SECRET=your_secret_key | MONGO_URI=mongodb://127.0.0.1:27017/logsphere | DASHBOARD_URL=http://localhost:5173
+Create a `.env` file (see `.env.example`):
 
-# Start the Node Application Backend
+```env
+PORT=5000
+MONGO_URI=mongodb://127.0.0.1:27017/logsphere
+JWT_SECRET=your_secret_key
+CORS_ORIGIN=http://localhost:5173
+DASHBOARD_URL=http://localhost:5173
+```
+
+Start the server:
+
+```bash
 npm run dev
 ```
 
-### 2. Frontend Dashboard Setup
+### 3. Dashboard setup
+
 ```bash
-# Open a new terminal session and navigate to the frontend directory
 cd dashboard
-
-# Install Frontend dependencies
 npm install
+```
 
-# Start the Vite development server
+Create a `.env` file:
+
+```env
+VITE_API_URL=http://localhost:5000
+```
+
+Start the dashboard:
+
+```bash
 npm run dev
 ```
 
-> **Note**: Access the dashboard locally at `http://localhost:5173`. Upon your first visit, you will need to register an `Admin` account. Subsequent users can register as `Client` and provide the Admin's email to link their accounts.
+Access at `http://localhost:5173`
 
-### 3. Agent Integration
-To connect an actual machine to your dashboard, you run a single installation command. The agent will automatically connect to your backend and appear in the UI as a pending device for you to claim.
+### 4. Agent deployment
 
-**Over-The-Air (OTA) Linux Install**
-Open a terminal on your Linux target machine and execute the bash installer:
+**Linux** (run on target machine):
+
 ```bash
-curl -sL "http://localhost:5000/install.sh" | bash -s -- --ingestUrl "http://localhost:5000"
+curl -sL "http://<server-ip>:5000/install.sh" | sudo bash -s -- --ingestUrl "http://<server-ip>:5000"
 ```
-*The installer automatically downloads the native Linux binary and registers a secure `systemd` background service.*
 
-**Over-The-Air (OTA) Windows Install**
-Open an **Administrator** PowerShell window on your Windows target machine and execute the deployment script:
+**Windows** (run in Administrator PowerShell):
+
 ```powershell
-Invoke-WebRequest -Uri "http://localhost:5000/install.ps1" -OutFile install.ps1; .\install.ps1 -ingestUrl "http://localhost:5000"
+Invoke-WebRequest -Uri "http://<server-ip>:5000/install.ps1" -OutFile install.ps1; .\install.ps1 -ingestUrl "http://<server-ip>:5000"
 ```
-*The installer requires Administrator privileges to download the agent to Program Files and register a Windows Scheduled Task that automatically starts the agent on boot.*
 
-**Custom Log Tailing (Bonus)**
-Want to see live application logs inside your dashboard? The agent defaults to scanning for an `app.log` file in its configuration directory (e.g. `%PROGRAMDATA%\LogSphere\app.log` or `/etc/logsphere/app.log`). Merely pipe any application errors to that file and the C++ Agent will intercept and stream them into your Dashboard's Live Log Console instantly!
+After running, the device appears in the dashboard under **Devices → New Devices Detected**. Click **Claim Device** to start monitoring.
 
 ---
 
-## 🤝 Contributing
-Contributions are highly encouraged! Please feel free to open a Pull Request.
+## Usage Flow
 
-## 📄 License
-This project is licensed under the standard ISC License.
+1. **Register** an Admin account on the dashboard
+2. **Deploy** the agent on target machines using the install command
+3. **Claim** devices as they appear in the Devices tab
+4. **Monitor** real-time metrics in Overview and Metrics tabs
+5. **Configure** alert thresholds in the Alert Rules tab
+6. **Add Clients** — they register with your Admin email and claim their own devices
+7. **Switch** between client systems using the System Selector dropdown
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/ingest` | systemKey | Telemetry data ingestion |
+| POST | `/auth/register` | — | User registration |
+| POST | `/auth/login` | — | JWT token generation |
+| GET | `/auth/refresh` | JWT | Refresh token with latest systemId |
+| GET | `/metrics/cpu` | JWT | CPU time-series data |
+| GET | `/metrics/memory` | JWT | Memory time-series data |
+| GET | `/logs` | JWT | Log entries (classified) |
+| GET | `/hosts` | JWT | Registered hosts list |
+| GET | `/trends` | JWT | CPU/memory trend analysis |
+| GET | `/history` | JWT | Today vs yesterday comparison |
+| GET | `/predict` | JWT | Load forecast predictions |
+| GET | `/health` | JWT | System health score |
+| GET | `/sla` | JWT | SLA compliance status |
+| POST | `/api/devices/announce` | — | Agent self-registration |
+| GET | `/api/devices/credentials` | — | Agent credential polling |
+| POST | `/api/devices/claim/:id` | JWT | Claim a pending device |
+| GET | `/api/devices/all` | JWT | List owned devices with status |
+| GET | `/alert-rules` | JWT | Get alert rule config |
+| PUT | `/alert-rules` | JWT | Update alert thresholds |
+
+---
+
+## Environment Variables
+
+### Server (`server/.env`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `PORT` | No | Server port (default: 5000) |
+| `MONGO_URI` | Yes | MongoDB connection string |
+| `JWT_SECRET` | Yes | Secret for signing JWT tokens |
+| `CORS_ORIGIN` | No | Allowed origins (default: *) |
+| `DASHBOARD_URL` | No | Dashboard URL for password reset emails |
+| `EMAIL_USER` | No | SMTP username for password reset |
+| `EMAIL_PASS` | No | SMTP password for password reset |
+
+### Dashboard (`dashboard/.env`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_API_URL` | Yes | Backend server URL |
+
+---
+
+## Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes (`git commit -m 'Add my feature'`)
+4. Push to the branch (`git push origin feature/my-feature`)
+5. Open a Pull Request
+
+---
+
+## License
+
+This project is licensed under the ISC License.
