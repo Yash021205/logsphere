@@ -167,6 +167,43 @@ export default function AgentSetup() {
           </p>
         </div>
 
+        {/* Agent Management Commands */}
+        <div style={{ marginTop: '25px' }}>
+          <h3 style={{ color: '#cbd5e1', marginBottom: '12px', fontSize: '1rem' }}>Manage Agent</h3>
+          <div style={{
+            background: '#020617',
+            borderRadius: '10px',
+            border: '1px solid #1e293b',
+            padding: '16px 20px',
+            fontSize: '0.82rem',
+            lineHeight: '2'
+          }}>
+            {activeOS === 'windows' ? (
+              <div>
+                <p style={{ color: '#64748b', margin: '0 0 4px', fontWeight: '600' }}>PowerShell (Administrator):</p>
+                <code style={{ color: '#10b981' }}>Stop-ScheduledTask -TaskName "LogSphereAgent"</code>
+                <span style={{ color: '#475569' }}> — stop agent</span><br/>
+                <code style={{ color: '#10b981' }}>Start-ScheduledTask -TaskName "LogSphereAgent"</code>
+                <span style={{ color: '#475569' }}> — start agent</span><br/>
+                <code style={{ color: '#f87171' }}>Unregister-ScheduledTask -TaskName "LogSphereAgent" -Confirm:$false</code>
+                <span style={{ color: '#475569' }}> — uninstall</span>
+              </div>
+            ) : (
+              <div>
+                <p style={{ color: '#64748b', margin: '0 0 4px', fontWeight: '600' }}>Terminal:</p>
+                <code style={{ color: '#10b981' }}>sudo systemctl stop logsphere-agent</code>
+                <span style={{ color: '#475569' }}> — stop agent</span><br/>
+                <code style={{ color: '#10b981' }}>sudo systemctl start logsphere-agent</code>
+                <span style={{ color: '#475569' }}> — start agent</span><br/>
+                <code style={{ color: '#10b981' }}>sudo systemctl status logsphere-agent</code>
+                <span style={{ color: '#475569' }}> — check status</span><br/>
+                <code style={{ color: '#f87171' }}>sudo systemctl disable --now logsphere-agent</code>
+                <span style={{ color: '#475569' }}> — uninstall</span>
+              </div>
+            )}
+          </div>
+        </div>
+
       </div>
     </div>
   );
